@@ -1,1 +1,0 @@
-ALTER TABLE users DROP CONSTRAINT IF EXISTS uni_users_username;
