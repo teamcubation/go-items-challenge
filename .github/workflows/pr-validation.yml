@@ -1,0 +1,118 @@
+name: Pull Request Validation
+
+on:
+  pull_request:
+    branches:
+      - develop
+      - main
+
+jobs:
+  validate-develop:
+    name: Validate Pull Request to Develop
+    runs-on: ubuntu-latest
+    if: github.base_ref == 'develop'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Validate branch name
+        run: >
+          BRANCH_NAME="${{ github.head_ref }}"
+
+          if [[ ! "$BRANCH_NAME" =~ ^(feature|enhancement|hotfix|bugfix)/.+$ ]];
+          then
+            echo "❌ Branch name '$BRANCH_NAME' is invalid. It must follow gitflow conventions (e.g., feature/*, bugfix/*, release/*, hotfix/*)."
+            exit 1
+          fi
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: 1.23.3
+      - name: Install dependencies
+        run: go mod tidy
+      - name: Run golangci-lint
+        run: |
+          curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin v1.54.2
+          golangci-lint run
+      - name: Create coverage ignore file
+        run: |
+          if [[ -f .covignore ]]; then
+            while read -r pattern; do
+              echo $pattern >> cov_exclude.txt
+            done < .covignore
+          fi
+      - name: Run tests with coverage
+        run: |
+          if [[ -f cov_exclude.txt ]]; then
+            EXCLUDE=$(awk '{print "--coverpkg=./...,"$0}' cov_exclude.txt | paste -sd "," -)
+          else
+            EXCLUDE="./..."
+          fi
+          go test -coverprofile=coverage.out $EXCLUDE ./...
+      - name: Check test coverage
+        run: >
+          TOTAL_COVERAGE=$(go tool cover -func=coverage.out | grep total | awk
+          '{print $3}' | sed 's/%//')
+
+          echo "Total Coverage: $TOTAL_COVERAGE%"
+
+          if (( $(echo "$TOTAL_COVERAGE < 80" | bc -l) )); then
+            echo "❌ Test coverage is below 80%. Current coverage: $TOTAL_COVERAGE%"
+            exit 1
+          fi
+
+  validate-main:
+    name: Validate Pull Request to Main
+    runs-on: ubuntu-latest
+    if: github.base_ref == 'main'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Validate branch name
+        run: |
+          BRANCH_NAME="${{ github.head_ref }}"
+          if [[ ! "$BRANCH_NAME" =~ ^release/.+$ ]]; then
+            echo "❌ Branch name '$BRANCH_NAME' is invalid. It must follow the release/* convention."
+            exit 1
+          fi
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: 1.23.3
+
+      - name: Install dependencies
+        run: go mod tidy
+
+      - name: Run golangci-lint
+        run: |
+          curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin v1.54.2
+          golangci-lint run
+
+      - name: Create coverage ignore file
+        run: |
+          if [[ -f .covignore ]]; then
+            while read -r pattern; do
+              echo $pattern >> cov_exclude.txt
+            done < .covignore
+          fi
+
+      - name: Run tests with coverage
+        run: |
+          if [[ -f cov_exclude.txt ]]; then
+            EXCLUDE=$(awk '{print "--coverpkg=./...,"$0}' cov_exclude.txt | paste -sd "," -)
+          else
+            EXCLUDE="./..."
+          fi
+          go test -coverprofile=coverage.out $EXCLUDE ./...
+
+      - name: Check test coverage
+        run: |
+          TOTAL_COVERAGE=$(go tool cover -func=coverage.out | grep total | awk '{print $3}' | sed 's/%//')
+          echo "Total Coverage: $TOTAL_COVERAGE%"
+          if (( $(echo "$TOTAL_COVERAGE < 80" | bc -l) )); then
+            echo "❌ Test coverage is below 80%. Current coverage: $TOTAL_COVERAGE%"
+            exit 1
+          fi
