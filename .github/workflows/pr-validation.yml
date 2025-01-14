@@ -1,0 +1,88 @@
+name: Pull Request Validation
+
+on:
+  pull_request:
+    branches:
+      - develop
+      - main
+
+jobs:
+  validate-branch-name:
+    name: Validate Branch Name
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validate branch name
+        run: |
+          BRANCH_NAME="${{ github.head_ref }}"
+          if [[ "$GITHUB_BASE_REF" == "develop" && ! "$BRANCH_NAME" =~ ^(feature|enhancement|bugfix|hotfix)/.+$ ]]; then
+            echo "❌ Branch name '$BRANCH_NAME' is invalid for develop. Allowed: feature/*, enhancement/*, bugfix/*, hotfix/*."
+            exit 1
+          elif [[ "$GITHUB_BASE_REF" == "main" && ! "$BRANCH_NAME" =~ ^release/.+$ ]]; then
+            echo "❌ Branch name '$BRANCH_NAME' is invalid for main. Allowed: release/*."
+            exit 1
+          fi
+
+  #   run-linter:
+  #     name: Run Linter
+  #     runs-on: ubuntu-latest
+  #     steps:
+  #       - name: Checkout code
+  #         uses: actions/checkout@v4
+
+  #       - name: Install golangci-lint
+  #         run: |
+  #           curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin v1.54.2
+  #           echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
+
+  #       - name: Verify golangci-lint installation
+  #         run: golangci-lint --version
+
+  #       - name: Run golangci-lint
+  #         run: golangci-lint run ./...
+
+  run-tests:
+    name: Run Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Run tests with coverage
+        run: |
+          go test -coverprofile=coverage.out ./...
+
+#   check-coverage:
+#     name: Check Test Coverage
+#     needs: run-tests
+#     runs-on: ubuntu-latest
+#     steps:
+#       - name: Checkout code
+#         uses: actions/checkout@v3
+
+#       - name: Parse .covignore and exclude paths
+#         id: parse-covignore
+#         run: |
+#           IGNORE_PATHS=$(cat .covignore | sed 's/^/-not -path "**\//' | tr '\n' ' ')
+#           echo "IGNORE_PATHS=$IGNORE_PATHS" >> $GITHUB_ENV
+
+#       - name: Filter coverage file
+#         run: |
+#           # Exclude ignored files from the coverage file
+#           cat coverage.out | while read line; do
+#           if [[ $line == *"mode:"* ]]; then
+#               echo $line
+#           else
+#               FILE=$(echo $line | cut -d: -f1)
+#               if ! echo $FILE | grep $IGNORE_PATHS; then
+#               echo $line
+#               fi
+#           fi
+#           done > filtered_coverage.out
+
+#       - name: Validate coverage
+#         run: |
+#           TOTAL_COVERAGE=$(go tool cover -func=filtered_coverage.out | grep total | awk '{print $3}' | sed 's/%//')
+#           echo "Total Coverage: $TOTAL_COVERAGE%"
+#           if (( $(echo "$TOTAL_COVERAGE < 80" | bc -l) )); then
+#           echo "❌ Test coverage is below 80%. Current coverage: $TOTAL_COVERAGE%"
+#           exit 1
+#           fi
