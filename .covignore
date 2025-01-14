@@ -1,0 +1,6 @@
+**/mocks/**
+cmd/server/main.go
+cmd/mockapi/main.go
+internal/ports/*
+db/*
+pkg/log/*

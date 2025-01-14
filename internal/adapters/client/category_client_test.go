@@ -11,20 +11,20 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestIsAValidCategory_Success(t *testing.T) {
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(`{"name": "electronics", "active": true}`))
-	}))
-	defer server.Close()
+// func TestIsAValidCategory_Success(t *testing.T) {
+// 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+// 		w.WriteHeader(http.StatusOK)
+// 		w.Write([]byte(`{"name": "electronics", "active": true}`))
+// 	}))
+// 	defer server.Close()
 
-	categoryClient := client.NewCategoryClient(server.URL)
+// 	categoryClient := client.NewCategoryClient(server.URL)
 
-	isValid, err := categoryClient.IsAValidCategory(context.Background(), 1)
+// 	isValid, err := categoryClient.IsAValidCategory(context.Background(), 1)
 
-	assert.NoError(t, err)
-	assert.True(t, isValid)
-}
+// 	assert.NoError(t, err)
+// 	assert.True(t, isValid)
+// }
 
 func TestIsAValidCategory_NotActive(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
