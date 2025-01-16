@@ -1,15 +1,51 @@
 services:
+
+  server:
+    build:
+      context: .
+      dockerfile: cmd/server/Dockerfile
+    container_name: server_container
+    ports:
+      - "8080:8080"
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USER: ${POSTGRES_USER}
+      DB_PASSWORD: ${POSTGRES_PASSWORD}
+      DB_NAME: ${POSTGRES_DB}
+    depends_on:
+      - mockapi
+      - postgres
+    networks:
+      - app-network
+
+  mockapi:
+    build:
+      context: ./mockapi
+      dockerfile: Dockerfile
+    container_name: mockapi
+    ports:
+      - "8000:8000"
+    networks:
+      - app-network
+
   postgres:
     image: postgres:latest
     container_name: postgres_container
     ports:
       - "5433:5432"
     environment:
-      POSTGRES_USER: root
-      POSTGRES_PASSWORD: secret
-      POSTGRES_DB: mercadolibre
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    networks:
+      - app-network
 
 volumes:
   postgres_data:
+
+networks:
+  app-network:
+    driver: bridge
