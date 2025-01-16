@@ -94,14 +94,14 @@ func TestItemHandler_DeleteItem(t *testing.T) {
 	mockService.AssertExpectations(t)
 }
 
-func TestItemHandler_GetItemById(t *testing.T) {
+func TestItemHandler_GetItemByID(t *testing.T) {
 	mockService := new(mocks.ItemService)
 	handler := http2.NewItemHandler(mockService)
 	router := setupRouter(handler)
 
 	itemID := 1
 	foundItem := &item.Item{ID: itemID, Code: "456"}
-	mockService.On("GetItemById", mock.Anything, itemID).Return(foundItem, nil)
+	mockService.On("GetItemByID", mock.Anything, itemID).Return(foundItem, nil)
 
 	req := httptest.NewRequest(http.MethodGet, "/items/"+strconv.Itoa(itemID), nil)
 	rec := httptest.NewRecorder()
