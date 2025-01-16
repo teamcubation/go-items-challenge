@@ -17,15 +17,15 @@ var (
 	ErrUsernameNotFound = fmt.Errorf("username not found")
 )
 
-type AuthService struct {
+type authService struct {
 	repo out.UserRepository
 }
 
-func NewAuthService(repo out.UserRepository) *AuthService {
-	return &AuthService{repo: repo}
+func NewAuthService(repo out.UserRepository) *authService {
+	return &authService{repo: repo}
 }
 
-func (srv *AuthService) RegisterUser(ctx context.Context, newUser *user.User) (*user.User, error) {
+func (srv *authService) RegisterUser(ctx context.Context, newUser *user.User) (*user.User, error) {
 	lowerUsername := strings.ToLower(newUser.Username)
 	userFound, err := srv.repo.GetUserByUsername(ctx, lowerUsername)
 	if err != nil {
@@ -50,7 +50,7 @@ func (srv *AuthService) RegisterUser(ctx context.Context, newUser *user.User) (*
 	return newUser, nil
 }
 
-func (srv *AuthService) Login(ctx context.Context, creds user.Credentials) (string, error) {
+func (srv *authService) Login(ctx context.Context, creds user.Credentials) (string, error) {
 	userFound, err := srv.repo.GetUserByUsername(ctx, creds.Username)
 
 	if userFound.Username != creds.Username {
