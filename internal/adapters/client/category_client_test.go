@@ -29,7 +29,10 @@ import (
 func TestIsAValidCategory_NotActive(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
-		_, _ = w.Write([]byte(`{"name": "toys", "active": false}`))
+		_, err := w.Write([]byte(`{"name": "toys", "active": false}`))
+		if err != nil {
+			t.Errorf("error writing response: %v", err)
+		}
 	}))
 	defer server.Close()
 

@@ -65,7 +65,7 @@ func (r *itemRepository) GetItemById(ctx context.Context, id int) (*item.Item, e
 	var itm item.Item
 	if err := r.db.WithContext(ctx).First(&itm, id).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, fmt.Errorf("item with ID %d not found", id)
+			return nil, fmt.Errorf("item with ID %d not found: %v", id, err)
 		}
 		return nil, err
 	}
