@@ -10,8 +10,7 @@ import (
 )
 
 type userRepository struct {
-	db         *gorm.DB
-	errorState error
+	db *gorm.DB
 }
 
 func NewUserRepository(db *gorm.DB) out.UserRepository {

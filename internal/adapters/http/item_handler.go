@@ -31,7 +31,7 @@ func (h *ItemHandler) CreateItem(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	json.NewEncoder(w).Encode(createdItem)
+	_ = json.NewEncoder(w).Encode(createdItem)
 }
 
 func (h *ItemHandler) UpdateItem(w http.ResponseWriter, r *http.Request) {
@@ -52,7 +52,7 @@ func (h *ItemHandler) UpdateItem(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	json.NewEncoder(w).Encode(updatedItem)
+	_ = json.NewEncoder(w).Encode(updatedItem)
 }
 
 func (h *ItemHandler) DeleteItem(w http.ResponseWriter, r *http.Request) {
@@ -67,7 +67,7 @@ func (h *ItemHandler) DeleteItem(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	json.NewEncoder(w).Encode(deletedItem)
+	_ = json.NewEncoder(w).Encode(deletedItem)
 }
 
 func (h *ItemHandler) GetItemById(w http.ResponseWriter, r *http.Request) {
@@ -90,7 +90,7 @@ func (h *ItemHandler) GetItemById(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Item not found", http.StatusNotFound)
 		return
 	}
-	json.NewEncoder(w).Encode(itm)
+	_ = json.NewEncoder(w).Encode(itm)
 }
 
 func (h *ItemHandler) ListItems(w http.ResponseWriter, r *http.Request) {
@@ -113,5 +113,5 @@ func (h *ItemHandler) ListItems(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	json.NewEncoder(w).Encode(items)
+	_ = json.NewEncoder(w).Encode(items)
 }
