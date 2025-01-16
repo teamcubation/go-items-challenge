@@ -79,7 +79,7 @@ func (h *ItemHandler) DeleteItem(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (h *ItemHandler) GetItemById(w http.ResponseWriter, r *http.Request) {
+func (h *ItemHandler) GetItemByID(w http.ResponseWriter, r *http.Request) {
 	ctx := log.Context(r)
 	logger := log.GetFromContext(ctx)
 	logger.Info("Entering ItemHandler: GetItemById()")
@@ -90,7 +90,7 @@ func (h *ItemHandler) GetItemById(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Invalid item ID", http.StatusBadRequest)
 		return
 	}
-	itm, err := h.itemService.GetItemById(r.Context(), id)
+	itm, err := h.itemService.GetItemByID(r.Context(), id)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusNotFound)
 		return

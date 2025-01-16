@@ -1,7 +1,6 @@
 package http
 
 import (
-	_ "context"
 	"encoding/json"
 	"errors"
 	"net/http"

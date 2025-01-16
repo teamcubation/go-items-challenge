@@ -21,7 +21,7 @@ func setupRouter(handler *http2.ItemHandler) *mux.Router {
 	r.HandleFunc("/items", handler.CreateItem).Methods(http.MethodPost)
 	r.HandleFunc("/items/{id}", handler.UpdateItem).Methods(http.MethodPut)
 	r.HandleFunc("/items/{id}", handler.DeleteItem).Methods(http.MethodDelete)
-	r.HandleFunc("/items/{id}", handler.GetItemById).Methods(http.MethodGet)
+	r.HandleFunc("/items/{id}", handler.GetItemByID).Methods(http.MethodGet)
 	r.HandleFunc("/items", handler.ListItems).Methods(http.MethodGet)
 	return r
 }

@@ -11,16 +11,16 @@ import (
 	"github.com/teamcubation/go-items-challenge/pkg/log"
 )
 
-type itemService struct {
+type ItemService struct {
 	repo   out.ItemRepository
 	client out.CategoryClient
 }
 
-func NewItemService(repo out.ItemRepository, client out.CategoryClient) *itemService {
-	return &itemService{repo: repo, client: client}
+func NewItemService(repo out.ItemRepository, client out.CategoryClient) *ItemService {
+	return &ItemService{repo: repo, client: client}
 }
 
-func (s *itemService) CreateItem(ctx context.Context, item *item.Item) (*item.Item, error) {
+func (s *ItemService) CreateItem(ctx context.Context, item *item.Item) (*item.Item, error) {
 	if item.Code == "" {
 		return nil, errors.New("invalid request body")
 	}
@@ -42,14 +42,13 @@ func (s *itemService) CreateItem(ctx context.Context, item *item.Item) (*item.It
 	item.CreatedAt = time.Now()
 	item.UpdatedAt = time.Now()
 	return s.repo.CreateItem(ctx, item)
-
 }
 
-func (s *itemService) GetItemById(ctx context.Context, id int) (*item.Item, error) {
+func (s *ItemService) GetItemByID(ctx context.Context, id int) (*item.Item, error) {
 	logger := log.GetFromContext(ctx)
 	logger.Info("Entering ItemService: GetItemById()")
 
-	itm, err := s.repo.GetItemById(ctx, id)
+	itm, err := s.repo.GetItemByID(ctx, id)
 	if err != nil {
 		return nil, err
 	}
@@ -59,8 +58,8 @@ func (s *itemService) GetItemById(ctx context.Context, id int) (*item.Item, erro
 	return itm, nil
 }
 
-func (s *itemService) UpdateItem(ctx context.Context, updatedItem *item.Item) (*item.Item, error) {
-	existingItem, err := s.repo.GetItemById(ctx, updatedItem.ID)
+func (s *ItemService) UpdateItem(ctx context.Context, updatedItem *item.Item) (*item.Item, error) {
+	existingItem, err := s.repo.GetItemByID(ctx, updatedItem.ID)
 	if err != nil {
 		return nil, err
 	}
@@ -89,11 +88,11 @@ func (s *itemService) UpdateItem(ctx context.Context, updatedItem *item.Item) (*
 	return result, nil
 }
 
-func (s *itemService) DeleteItem(ctx context.Context, id int) (*item.Item, error) {
+func (s *ItemService) DeleteItem(ctx context.Context, id int) (*item.Item, error) {
 	return s.repo.DeleteItem(ctx, id)
 }
 
-func (s *itemService) ListItems(ctx context.Context, status string, limit int, page int) ([]*item.Item, int, error) {
+func (s *ItemService) ListItems(ctx context.Context, status string, limit int, page int) ([]*item.Item, int, error) {
 	items, err := s.repo.ListItems(ctx, status, limit, page)
 	if err != nil {
 		return nil, 0, err
@@ -107,7 +106,7 @@ func (s *itemService) ListItems(ctx context.Context, status string, limit int, p
 	return result, totalPages, nil
 }
 
-func (s *itemService) ItemExistsByCode(ctx context.Context, code string) bool {
+func (s *ItemService) ItemExistsByCode(_ context.Context, _ string) bool {
 	return true
 }
 

@@ -1,6 +1,6 @@
 package item
 
-type ItemResponse struct {
+type Response struct {
 	TotalPages int    `json:"totalPages"`
 	Data       []Item `json:"data"`
 }
