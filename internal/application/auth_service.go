@@ -5,14 +5,17 @@ import (
 	"fmt"
 	"strings"
 
+	"golang.org/x/crypto/bcrypt"
+
 	"github.com/teamcubation/go-items-challenge/internal/domain/user"
 	"github.com/teamcubation/go-items-challenge/internal/ports/out"
 	"github.com/teamcubation/go-items-challenge/internal/utils"
-	"golang.org/x/crypto/bcrypt"
 )
 
-var ErrUsernameExists = fmt.Errorf("username already exists")
-var ErrUsernameNotFound = fmt.Errorf("username not found")
+var (
+	ErrUsernameExists   = fmt.Errorf("username already exists")
+	ErrUsernameNotFound = fmt.Errorf("username not found")
+)
 
 type authService struct {
 	repo out.UserRepository
@@ -25,7 +28,6 @@ func NewAuthService(repo out.UserRepository) *authService {
 func (srv *authService) RegisterUser(ctx context.Context, newUser *user.User) (*user.User, error) {
 	lowerUsername := strings.ToLower(newUser.Username)
 	userFound, err := srv.repo.GetUserByUsername(ctx, lowerUsername)
-
 	if err != nil {
 		return nil, fmt.Errorf("error fetching user: %w", err)
 	}
@@ -70,7 +72,7 @@ func (srv *authService) Login(ctx context.Context, creds user.Credentials) (stri
 	// Generate token (assuming you have a function to generate JWT tokens)
 	token, err := utils.GenerateToken(userFound.ID)
 	if err != nil {
-		return "", fmt.Errorf("Failed to generate token: %s", creds.Username)
+		return "", fmt.Errorf("failed to generate token: %s", creds.Username)
 	}
 
 	return token, nil

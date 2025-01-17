@@ -1,8 +1,9 @@
 package repository
 
 import (
-	"gorm.io/gorm"
 	"time"
+
+	"gorm.io/gorm"
 )
 
 type ItemModel struct {
@@ -21,7 +22,7 @@ func (ItemModel) TableName() string {
 	return "items"
 }
 
-func (item *ItemModel) BeforeSave(tx *gorm.DB) (err error) {
+func (item *ItemModel) BeforeSave(_ *gorm.DB) (err error) {
 	if item.Stock > 0 {
 		item.Status = "ACTIVE"
 	} else {

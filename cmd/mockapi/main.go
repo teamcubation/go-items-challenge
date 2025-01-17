@@ -13,7 +13,7 @@ type Category struct {
 	Active bool   `json:"active"`
 }
 
-//func getCategories(w http.ResponseWriter, r *http.Request) {
+// func getCategories(w http.ResponseWriter, r *http.Request) {
 //	// Lista hardcodeada de categorías
 //	categories := []Category{
 //		{Name: "sports", Active: true},
@@ -48,11 +48,6 @@ type Category struct {
 func main() {
 	r := mux.NewRouter()
 	r.HandleFunc("/v1/categories/{id}", application.GetCategories).Methods("GET")
-
-	//srv := &http.Server{
-	//	Addr:    ":8000",
-	//	Handler: r,
-	//}
 
 	log.Println("Server running on port 8000")
 	if err := http.ListenAndServe(":8000", r); err != nil {

@@ -89,7 +89,7 @@ func main() {
 	api.HandleFunc("/items", itemHandler.CreateItem).Methods("POST")
 	api.HandleFunc("/items/{id}", itemHandler.UpdateItem).Methods("PUT")
 	api.HandleFunc("/items/{id}", itemHandler.DeleteItem).Methods("DELETE")
-	api.HandleFunc("/items/{id}", itemHandler.GetItemById).Methods("GET")
+	api.HandleFunc("/items/{id}", itemHandler.GetItemByID).Methods("GET")
 	api.HandleFunc("/items", itemHandler.ListItems).Methods("GET")
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -120,8 +120,8 @@ func main() {
 	ctxShutDown, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 	if err := srv.Shutdown(ctxShutDown); err != nil {
-		log.Fatalf("Server forced to shutdown: %v", err)
+		log.Printf("Server forced to shutdown: %v", err)
+		return
 	}
 	log.Println("Server exiting")
-
 }

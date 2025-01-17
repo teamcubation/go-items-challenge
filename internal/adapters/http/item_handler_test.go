@@ -21,7 +21,7 @@ func setupRouter(handler *http2.ItemHandler) *mux.Router {
 	r.HandleFunc("/items", handler.CreateItem).Methods(http.MethodPost)
 	r.HandleFunc("/items/{id}", handler.UpdateItem).Methods(http.MethodPut)
 	r.HandleFunc("/items/{id}", handler.DeleteItem).Methods(http.MethodDelete)
-	r.HandleFunc("/items/{id}", handler.GetItemById).Methods(http.MethodGet)
+	r.HandleFunc("/items/{id}", handler.GetItemByID).Methods(http.MethodGet)
 	r.HandleFunc("/items", handler.ListItems).Methods(http.MethodGet)
 	return r
 }
@@ -94,14 +94,14 @@ func TestItemHandler_DeleteItem(t *testing.T) {
 	mockService.AssertExpectations(t)
 }
 
-func TestItemHandler_GetItemById(t *testing.T) {
+func TestItemHandler_GetItemByID(t *testing.T) {
 	mockService := new(mocks.ItemService)
 	handler := http2.NewItemHandler(mockService)
 	router := setupRouter(handler)
 
 	itemID := 1
 	foundItem := &item.Item{ID: itemID, Code: "456"}
-	mockService.On("GetItemById", mock.Anything, itemID).Return(foundItem, nil)
+	mockService.On("GetItemByID", mock.Anything, itemID).Return(foundItem, nil)
 
 	req := httptest.NewRequest(http.MethodGet, "/items/"+strconv.Itoa(itemID), nil)
 	rec := httptest.NewRecorder()

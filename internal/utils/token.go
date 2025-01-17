@@ -1,8 +1,9 @@
 package utils
 
 import (
-	"github.com/golang-jwt/jwt"
 	"time"
+
+	"github.com/golang-jwt/jwt"
 )
 
 var jwtKey = []byte("your_secret_key")
@@ -12,10 +13,10 @@ type Claims struct {
 	jwt.StandardClaims
 }
 
-func GenerateToken(UserID int) (string, error) {
+func GenerateToken(userID int) (string, error) {
 	expirationTime := time.Now().Add(1 * time.Hour)
 	claims := &Claims{
-		UserID: UserID,
+		UserID: userID,
 		StandardClaims: jwt.StandardClaims{
 			ExpiresAt: expirationTime.Unix(),
 		},
@@ -26,5 +27,4 @@ func GenerateToken(UserID int) (string, error) {
 		return "", err
 	}
 	return tokenString, nil
-
 }
