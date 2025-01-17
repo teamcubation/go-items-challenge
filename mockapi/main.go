@@ -4,8 +4,9 @@ import (
 	"log"
 	"net/http"
 
+	"mockapi/internal/application"
+
 	"github.com/gorilla/mux"
-	"github.com/teamcubation/go-items-challenge/internal/application"
 )
 
 type Category struct {

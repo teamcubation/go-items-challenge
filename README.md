@@ -46,3 +46,5 @@ This guide explains how to set up a PostgreSQL database using Docker. If you don
 - Modify the port in the `.env` file if `5432` is already in use on your machine.
 
 That's it! Your PostgreSQL database should now be up and running with Docker.
+
+- ElasticSearch init: docker-compose -f docker-compose-es.yml up -d
