@@ -2,9 +2,10 @@ package middleware
 
 import (
 	"context"
-	"github.com/golang-jwt/jwt"
 	"net/http"
 	"strings"
+
+	"github.com/golang-jwt/jwt"
 )
 
 type contextKey string
@@ -31,7 +32,7 @@ func AuthMiddleware(next http.Handler) http.Handler {
 		tokenString = strings.TrimPrefix(tokenString, "Bearer ")
 
 		claims := &Claims{}
-		token, err := jwt.ParseWithClaims(tokenString, claims, func(token *jwt.Token) (interface{}, error) {
+		token, err := jwt.ParseWithClaims(tokenString, claims, func(_ *jwt.Token) (interface{}, error) {
 			return JwtKey, nil
 		})
 		if err != nil || !token.Valid {

@@ -27,9 +27,12 @@ import (
 // }
 
 func TestIsAValidCategory_NotActive(t *testing.T) {
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(`{"name": "toys", "active": false}`))
+		_, err := w.Write([]byte(`{"name": "toys", "active": false}`))
+		if err != nil {
+			t.Errorf("error writing response: %v", err)
+		}
 	}))
 	defer server.Close()
 
@@ -39,11 +42,10 @@ func TestIsAValidCategory_NotActive(t *testing.T) {
 
 	assert.NoError(t, err)
 	assert.False(t, isValid)
-
 }
 
 func TestIsAValidCategory_ServerError(t *testing.T) {
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
 	}))
 	defer server.Close()

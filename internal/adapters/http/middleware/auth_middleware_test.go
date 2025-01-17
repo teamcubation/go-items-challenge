@@ -47,7 +47,7 @@ func TestAuthMiddleware_MissingToken(t *testing.T) {
 	req := httptest.NewRequest("GET", "/", nil)
 	rec := httptest.NewRecorder()
 
-	handler := middleware.AuthMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	handler := middleware.AuthMiddleware(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
 	}))
 
@@ -62,7 +62,7 @@ func TestAuthMiddleware_InvalidToken(t *testing.T) {
 	req.Header.Set("Authorization", "Bearer invalid.token.here")
 	rec := httptest.NewRecorder()
 
-	handler := middleware.AuthMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	handler := middleware.AuthMiddleware(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
 	}))
 
@@ -85,7 +85,7 @@ func TestAuthMiddleware_InvalidUserID(t *testing.T) {
 	req.Header.Set("Authorization", "Bearer "+tokenString)
 	rec := httptest.NewRecorder()
 
-	handler := middleware.AuthMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	handler := middleware.AuthMiddleware(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
 	}))
 

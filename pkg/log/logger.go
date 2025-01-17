@@ -2,9 +2,10 @@ package log
 
 import (
 	"context"
+	"net/http"
+
 	"github.com/google/uuid"
 	"github.com/sirupsen/logrus"
-	"net/http"
 )
 
 const RequestIDKey = "x-request-id"
