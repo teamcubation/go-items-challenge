@@ -18,6 +18,8 @@ import (
 	_ "github.com/teamcubation/go-items-challenge/internal/ports/in"
 	_ "github.com/teamcubation/go-items-challenge/internal/ports/out"
 
+	httpSwagger "github.com/swaggo/http-swagger"
+	_ "github.com/teamcubation/go-items-challenge/docs"
 	"github.com/teamcubation/go-items-challenge/internal/adapters/client"
 	httphdl "github.com/teamcubation/go-items-challenge/internal/adapters/http"
 	"github.com/teamcubation/go-items-challenge/internal/adapters/http/middleware"
@@ -41,6 +43,11 @@ func runMigrations(db *gorm.DB) {
 	}
 }
 
+// @title Items API
+// @version 1.0
+// @description This is a simple items API
+// @host localhost:8080
+// @BasePath /api
 func main() {
 	err := godotenv.Load()
 	if err != nil {
@@ -72,6 +79,7 @@ func main() {
 
 	r := mux.NewRouter()
 
+	r.PathPrefix("/swagger").Handler(httpSwagger.WrapHandler)
 	r.HandleFunc("/register", authHandler.Register).Methods("POST")
 	r.HandleFunc("/login", authHandler.Login).Methods("POST")
 
