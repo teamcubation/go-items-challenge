@@ -21,7 +21,7 @@ func NewCategoryClient(baseURL string) out.CategoryClient {
 		SetRetryCount(3).                      // Retries up to 3 times if it fails
 		SetRetryWaitTime(1 * time.Second).     // Time between retries
 		SetRetryMaxWaitTime(10 * time.Second). // Maximum wait time between retries
-		AddRetryCondition(func(r *resty.Response, err error) bool {
+		AddRetryCondition(func(r *resty.Response, _ error) bool {
 			return r.StatusCode() >= 500
 		})
 
@@ -36,8 +36,7 @@ type Category struct {
 	Active bool   `json:"active"`
 }
 
-func (c *categoryClient) IsAValidCategory(ctx context.Context, id int) (bool, error) {
-
+func (c *categoryClient) IsAValidCategory(_ context.Context, id int) (bool, error) {
 	endpoint := fmt.Sprintf("/v1/categories/%d", id)
 
 	var response Category

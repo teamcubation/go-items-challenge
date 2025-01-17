@@ -31,7 +31,10 @@ func (h *ItemHandler) CreateItem(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	json.NewEncoder(w).Encode(createdItem)
+	if err := json.NewEncoder(w).Encode(createdItem); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
 }
 
 func (h *ItemHandler) UpdateItem(w http.ResponseWriter, r *http.Request) {
@@ -52,7 +55,10 @@ func (h *ItemHandler) UpdateItem(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	json.NewEncoder(w).Encode(updatedItem)
+	if err := json.NewEncoder(w).Encode(updatedItem); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
 }
 
 func (h *ItemHandler) DeleteItem(w http.ResponseWriter, r *http.Request) {
@@ -67,10 +73,13 @@ func (h *ItemHandler) DeleteItem(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	json.NewEncoder(w).Encode(deletedItem)
+	if err := json.NewEncoder(w).Encode(deletedItem); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
 }
 
-func (h *ItemHandler) GetItemById(w http.ResponseWriter, r *http.Request) {
+func (h *ItemHandler) GetItemByID(w http.ResponseWriter, r *http.Request) {
 	ctx := log.Context(r)
 	logger := log.GetFromContext(ctx)
 	logger.Info("Entering ItemHandler: GetItemById()")
@@ -81,7 +90,7 @@ func (h *ItemHandler) GetItemById(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Invalid item ID", http.StatusBadRequest)
 		return
 	}
-	itm, err := h.itemService.GetItemById(r.Context(), id)
+	itm, err := h.itemService.GetItemByID(r.Context(), id)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusNotFound)
 		return
@@ -90,7 +99,10 @@ func (h *ItemHandler) GetItemById(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Item not found", http.StatusNotFound)
 		return
 	}
-	json.NewEncoder(w).Encode(itm)
+	if err := json.NewEncoder(w).Encode(itm); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
 }
 
 func (h *ItemHandler) ListItems(w http.ResponseWriter, r *http.Request) {
@@ -113,5 +125,8 @@ func (h *ItemHandler) ListItems(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	json.NewEncoder(w).Encode(items)
+	if err := json.NewEncoder(w).Encode(items); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
 }

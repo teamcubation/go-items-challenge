@@ -4,27 +4,26 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
-	"github.com/teamcubation/go-items-challenge/internal/adapters/http/middleware"
-	"github.com/teamcubation/go-items-challenge/internal/domain/user"
-	"github.com/teamcubation/go-items-challenge/pkg/log"
-
-	"github.com/teamcubation/go-items-challenge/internal/domain/item"
 	"gorm.io/gorm"
 
-	"strings"
+	"github.com/teamcubation/go-items-challenge/internal/adapters/http/middleware"
+	"github.com/teamcubation/go-items-challenge/internal/domain/item"
+	"github.com/teamcubation/go-items-challenge/internal/domain/user"
+	"github.com/teamcubation/go-items-challenge/pkg/log"
 )
 
-type itemRepository struct {
+type ItemRepository struct {
 	db *gorm.DB
 }
 
-func NewItemRepository(db *gorm.DB) *itemRepository {
-	return &itemRepository{db: db}
+func NewItemRepository(db *gorm.DB) *ItemRepository {
+	return &ItemRepository{db: db}
 }
 
-func (r *itemRepository) CreateItem(ctx context.Context, itm *item.Item) (*item.Item, error) {
+func (r *ItemRepository) CreateItem(ctx context.Context, itm *item.Item) (*item.Item, error) {
 	userID, ok := ctx.Value(middleware.UserContextKey).(int)
 	if !ok || userID == 0 {
 		return nil, fmt.Errorf("invalid user ID in context")
@@ -57,15 +56,15 @@ func (r *itemRepository) CreateItem(ctx context.Context, itm *item.Item) (*item.
 	return itm, nil
 }
 
-func (r *itemRepository) GetItemById(ctx context.Context, id int) (*item.Item, error) {
+func (r *ItemRepository) GetItemByID(ctx context.Context, id int) (*item.Item, error) {
 	logger := log.GetFromContext(ctx)
 	logger.Info("Entering itemRepository: GetItemById()")
 	logger.Printf("Fetching item with ID: %d", id)
 
 	var itm item.Item
 	if err := r.db.WithContext(ctx).First(&itm, id).Error; err != nil {
-		if errors.Is(gorm.ErrRecordNotFound, err) {
-			return nil, fmt.Errorf("item with ID %d not found", id)
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, fmt.Errorf("item with ID %d not found: %v", id, err)
 		}
 		return nil, err
 	}
@@ -83,8 +82,7 @@ func (r *itemRepository) GetItemById(ctx context.Context, id int) (*item.Item, e
 	return &itm, nil
 }
 
-func (r *itemRepository) UpdateItem(ctx context.Context, itm *item.Item) (*item.Item, error) {
-
+func (r *ItemRepository) UpdateItem(ctx context.Context, itm *item.Item) (*item.Item, error) {
 	userID, ok := ctx.Value(middleware.UserContextKey).(int)
 	if !ok || userID == 0 {
 		return nil, fmt.Errorf("user ID not found in context")
@@ -105,9 +103,6 @@ func (r *itemRepository) UpdateItem(ctx context.Context, itm *item.Item) (*item.
 	if !itm.CreatedAt.IsZero() && !existingItem.CreatedAt.Equal(itm.CreatedAt) {
 		return nil, fmt.Errorf("cannot change the created_at field")
 	}
-	//if itm.UpdatedBy != 0 && existingItem.UpdatedBy != itm.UpdatedBy {
-	//	return nil, fmt.Errorf("cannot change the updated_by field")
-	//}
 
 	// Ensure the code field is not empty
 	if itm.Code == "" {
@@ -145,7 +140,7 @@ func (r *itemRepository) UpdateItem(ctx context.Context, itm *item.Item) (*item.
 	return itm, nil
 }
 
-func (r *itemRepository) DeleteItem(ctx context.Context, id int) (*item.Item, error) {
+func (r *ItemRepository) DeleteItem(ctx context.Context, id int) (*item.Item, error) {
 	var itm item.Item
 	if err := r.db.WithContext(ctx).First(&itm, id).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
@@ -159,10 +154,10 @@ func (r *itemRepository) DeleteItem(ctx context.Context, id int) (*item.Item, er
 	return &itm, nil
 }
 
-func (r *itemRepository) ListItems(ctx context.Context, status string, limit int, page int) (*item.ItemResponse, error) {
+func (r *ItemRepository) ListItems(ctx context.Context, status string, limit int, page int) (*item.Response, error) {
 	status = strings.ToUpper(status)
 	if status != "ACTIVE" && status != "INACTIVE" {
-		return nil, fmt.Errorf("Invalid status: %s", status)
+		return nil, fmt.Errorf("invalid status: %s", status)
 	}
 
 	var items []item.Item
@@ -176,16 +171,15 @@ func (r *itemRepository) ListItems(ctx context.Context, status string, limit int
 	r.db.WithContext(ctx).Model(&item.Item{}).Where("UPPER(status) = ?", status).Count(&totalItems)
 	totalPages := int((totalItems + int64(limit) - 1) / int64(limit))
 
-	response := &item.ItemResponse{
+	response := &item.Response{
 		TotalPages: totalPages,
 		Data:       items,
 	}
 
 	return response, nil
-
 }
 
-func (r *itemRepository) ItemExistsByCode(ctx context.Context, code string) bool {
+func (r *ItemRepository) ItemExistsByCode(ctx context.Context, code string) bool {
 	var count int64
 	r.db.WithContext(ctx).Model(&item.Item{}).Where("code = ?", code).Count(&count)
 	return count > 0

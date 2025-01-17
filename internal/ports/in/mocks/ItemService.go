@@ -75,12 +75,12 @@ func (_m *ItemService) DeleteItem(ctx context.Context, id int) (*item.Item, erro
 	return r0, r1
 }
 
-// GetItemById provides a mock function with given fields: ctx, id
-func (_m *ItemService) GetItemById(ctx context.Context, id int) (*item.Item, error) {
+// GetItemByID provides a mock function with given fields: ctx, id
+func (_m *ItemService) GetItemByID(ctx context.Context, id int) (*item.Item, error) {
 	ret := _m.Called(ctx, id)
 
 	if len(ret) == 0 {
-		panic("no return value specified for GetItemById")
+		panic("no return value specified for GetItemByID")
 	}
 
 	var r0 *item.Item
