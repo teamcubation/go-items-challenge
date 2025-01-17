@@ -41,6 +41,7 @@ func runMigrations(db *gorm.DB) {
 	}
 }
 
+// main function to boot up everything
 func main() {
 	err := godotenv.Load()
 	if err != nil {
