@@ -114,7 +114,7 @@ func (h *ItemHandler) DeleteItem(w http.ResponseWriter, r *http.Request) {
 // @Failute 400 {string} string "ID de item inválido"
 // @Failure 404 {string} string "Item não encontrado"
 // @Router /items/{id} [get]
-func (h *ItemHandler) GetItemById(w http.ResponseWriter, r *http.Request) {
+func (h *ItemHandler) GetItemByID(w http.ResponseWriter, r *http.Request) {
 	ctx := log.Context(r)
 	logger := log.GetFromContext(ctx)
 	logger.Info("Entering ItemHandler: GetItemById()")
