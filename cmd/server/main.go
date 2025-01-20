@@ -79,6 +79,8 @@ func main() {
 
 	r := mux.NewRouter()
 
+	r.Use(middleware.ErrorHandlingMiddleware)
+
 	r.PathPrefix("/swagger").Handler(httpSwagger.WrapHandler)
 	r.HandleFunc("/register", authHandler.Register).Methods("POST")
 	r.HandleFunc("/login", authHandler.Login).Methods("POST")
