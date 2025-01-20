@@ -3,6 +3,7 @@ package http
 import (
 	"encoding/json"
 	"errors"
+	"github.com/teamcubation/go-items-challenge/internal/utils"
 	"net/http"
 
 	"github.com/teamcubation/go-items-challenge/internal/application"
@@ -27,17 +28,10 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-
-	if u.Password == "" {
-		http.Error(w, "password is required", http.StatusBadRequest)
+	if err := utils.ValidateStruct(&u); err != nil {
+		http.Error(w, "invalid fields username and/or password", http.StatusBadRequest)
 		return
 	}
-
-	if u.Username == "" {
-		http.Error(w, "username is required", http.StatusBadRequest)
-		return
-	}
-
 	_, err := h.srv.RegisterUser(ctx, &u)
 	if err != nil {
 		if errors.Is(err, application.ErrUsernameExists) {
@@ -65,7 +59,10 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Invalid request payload", http.StatusBadRequest)
 		return
 	}
-
+	if err := utils.ValidateStruct(&creds); err != nil {
+		http.Error(w, "invalid fields username and/or password", http.StatusBadRequest)
+		return
+	}
 	token, err := h.srv.Login(ctx, creds)
 	if err != nil {
 		if errors.Is(err, application.ErrUsernameNotFound) {
