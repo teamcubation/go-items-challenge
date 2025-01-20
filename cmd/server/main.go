@@ -49,7 +49,7 @@ func runMigrations(db *gorm.DB) {
 // @host localhost:8080
 // @BasePath /api
 func main() {
-	err := godotenv.Load()
+	err := godotenv.Load("/app/.env")
 	if err != nil {
 		log.Fatalf("Error loading .env file: %v", err)
 	}
@@ -73,7 +73,7 @@ func main() {
 	authHandler := httphdl.NewAuthHandler(userSrv)
 
 	itemRepo := repository.NewItemRepository(db)
-	categoryClient := client.NewCategoryClient("http://localhost:8000")
+	categoryClient := client.NewCategoryClient("http://mockapi:8000")
 	itemSrv := application.NewItemService(itemRepo, categoryClient)
 	itemHandler := httphdl.NewItemHandler(itemSrv)
 
