@@ -2,6 +2,7 @@ package http
 
 import (
 	"encoding/json"
+	"github.com/teamcubation/go-items-challenge/internal/utils"
 	"net/http"
 	"strconv"
 
@@ -39,7 +40,10 @@ func (h *ItemHandler) CreateItem(w http.ResponseWriter, r *http.Request) {
 		}))
 		return
 	}
-
+	if err := utils.ValidateStruct(&itm); err != nil {
+		http.Error(w, "missing or invalid fields in the body", http.StatusBadRequest)
+		return
+	}
 	createdItem, err := h.itemService.CreateItem(r.Context(), &itm)
 	if err != nil {
 		panic(errs.New(http.StatusInternalServerError, "Internal server error", map[string]interface{}{
@@ -84,6 +88,13 @@ func (h *ItemHandler) UpdateItem(w http.ResponseWriter, r *http.Request) {
 		panic(errs.New(http.StatusBadRequest, "Invalid request payload", map[string]interface{}{
 			"error":   err.Error(),
 			"context": "Decoding request body",
+		}))
+		return
+	}
+	if err := utils.ValidateStruct(&itm); err != nil {
+		panic(errs.New(http.StatusBadRequest, "Invalid request payload", map[string]interface{}{
+			"error":   err.Error(),
+			"context": "missing or invalid fields in the body",
 		}))
 		return
 	}
@@ -143,7 +154,7 @@ func (h *ItemHandler) DeleteItem(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// GetItemById recupera um item pelo ID
+// GetItemByID recupera um item pelo ID
 // @Summary Recupera um item pelo ID
 // @Description Recupera um item existente com o ID fornecido
 // @Tags items

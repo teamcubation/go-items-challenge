@@ -31,7 +31,7 @@ func TestItemHandler_CreateItem(t *testing.T) {
 	handler := http2.NewItemHandler(mockService)
 	router := setupRouter(handler)
 
-	newItem := &item.Item{ID: 1, Code: "ABC", Stock: 50}
+	newItem := &item.Item{ID: 1, Code: "ABC", Stock: 50, Price: 10}
 
 	mockService.On("CreateItem", mock.Anything, newItem).Return(newItem, nil)
 
@@ -55,7 +55,7 @@ func TestItemHandler_UpdateItem(t *testing.T) {
 	router := setupRouter(handler)
 
 	itemID := 1
-	existingItem := &item.Item{ID: itemID, Code: "XYZ", Stock: 10}
+	existingItem := &item.Item{ID: itemID, Code: "XYZ", Stock: 10, Status: "ACTIVE"}
 	mockService.On("UpdateItem", mock.Anything, existingItem).Return(existingItem, nil)
 
 	reqBody, _ := json.Marshal(existingItem)

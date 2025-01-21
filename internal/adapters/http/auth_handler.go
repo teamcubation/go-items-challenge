@@ -7,6 +7,7 @@ import (
 	"github.com/teamcubation/go-items-challenge/internal/application"
 	"github.com/teamcubation/go-items-challenge/internal/domain/user"
 	"github.com/teamcubation/go-items-challenge/internal/ports/in"
+	"github.com/teamcubation/go-items-challenge/internal/utils"
 	"github.com/teamcubation/go-items-challenge/pkg/log"
 	"net/http"
 )
@@ -117,7 +118,10 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 		}))
 		return
 	}
-
+	if err := utils.ValidateStruct(&creds); err != nil {
+		http.Error(w, "invalid fields username and/or password", http.StatusBadRequest)
+		return
+	}
 	token, err := h.srv.Login(ctx, creds)
 	if err != nil {
 		if errors.Is(err, application.ErrUsernameNotFound) {

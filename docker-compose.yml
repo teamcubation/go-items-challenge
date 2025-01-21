@@ -18,6 +18,8 @@ services:
       - postgres
     networks:
       - app-network
+    volumes:
+      - ./.env:/app/.env
 
   mockapi:
     build:
