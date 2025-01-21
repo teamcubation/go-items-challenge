@@ -20,6 +20,16 @@ func NewItemHandler(itemService in.ItemService) *ItemHandler {
 	return &ItemHandler{itemService: itemService}
 }
 
+// CreateItem cria um novo item
+// @Summary Cria um novo item
+// @Description Cria um novo item com os dados fornecidos no corpo da requisição
+// @Tags items
+// @Accept json
+// @Produce json
+// @Param item body item.Item true "Informações do item"
+// @Success 200 {object} item.Item
+// @Failure 500 {string} string "Erro interno do servidor"
+// @Router /items [post]
 func (h *ItemHandler) CreateItem(w http.ResponseWriter, r *http.Request) {
 	var itm item.Item
 	if err := json.NewDecoder(r.Body).Decode(&itm); err != nil {
@@ -41,6 +51,18 @@ func (h *ItemHandler) CreateItem(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// UpdateItem atualiza um item existente
+// @Summary Atualiza um item existente
+// @Description Atualiza um item existente com os dados fornecidos no corpo da requisição
+// @Tags items
+// @Accept json
+// @Produce json
+// @Param id path int true "ID do item"
+// @Param item body item.Item true "Informações do item"
+// @Success 200 {object} item.Item
+// @Failure 404 {string} string "ID de item inválido"
+// @Failure 500 {string} string "Erro interno do servidor"
+// @Router /items/{id} [put]
 func (h *ItemHandler) UpdateItem(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	id, err := strconv.Atoi(vars["id"])
@@ -69,6 +91,17 @@ func (h *ItemHandler) UpdateItem(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// DeleteItem deleta um item existente
+// @Summary Deleta um item existente
+// @Description Deleta um item existente com o ID fornecido
+// @Tags items
+// @Accept json
+// @Produce json
+// @Param id path int true "ID do item"
+// @Success 200 {object} item.Item
+// @Failure 400 {string} string "ID de Item não encontrado"
+// @Failure 500 {string} string "Erro interno do servidor"
+// @Router /items/{id} [delete]
 func (h *ItemHandler) DeleteItem(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	id, err := strconv.Atoi(vars["id"])
@@ -87,6 +120,17 @@ func (h *ItemHandler) DeleteItem(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// GetItemById recupera um item pelo ID
+// @Summary Recupera um item pelo ID
+// @Description Recupera um item existente com o ID fornecido
+// @Tags items
+// @Accept json
+// @Produce json
+// @Param id path int true "ID do item"
+// @Success 200 {object} item.Item
+// @Failute 400 {string} string "ID de item inválido"
+// @Failure 404 {string} string "Item não encontrado"
+// @Router /items/{id} [get]
 func (h *ItemHandler) GetItemByID(w http.ResponseWriter, r *http.Request) {
 	ctx := log.Context(r)
 	logger := log.GetFromContext(ctx)
@@ -113,6 +157,20 @@ func (h *ItemHandler) GetItemByID(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// ListItems lista os itens
+// @Summary Lista os itens
+// @Description Lista os itens com base nos parâmetros fornecidos
+// @Tags items
+// @Accept json
+// @Produce json
+// @Param status query string false "Status do item"
+// @Param limit query int false "Limite de itens por página"
+// @Param page query int false "Página"
+// @Success 200 {object} []item.Item
+// @Failure 400 {string} string "Página inválida"
+// @Failure 400 {string} string "Limite inválido"
+// @Failure 500 {string} string "Erro interno do servidor"
+// @Router /items [get]
 func (h *ItemHandler) ListItems(w http.ResponseWriter, r *http.Request) {
 	status := r.URL.Query().Get("status")
 	limitStr := r.URL.Query().Get("limit")

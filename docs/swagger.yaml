@@ -1,0 +1,274 @@
+basePath: /api
+definitions:
+  item.Item:
+    properties:
+      category_id:
+        type: integer
+      code:
+        type: string
+      created_at:
+        type: string
+      created_by:
+        type: integer
+      description:
+        type: string
+      id:
+        type: integer
+      price:
+        type: number
+      status:
+        type: string
+      stock:
+        type: integer
+      title:
+        type: string
+      updated_at:
+        type: string
+      updated_by:
+        type: integer
+    type: object
+  user.Credentials:
+    properties:
+      password:
+        type: string
+      username:
+        type: string
+    type: object
+  user.User:
+    properties:
+      id:
+        type: integer
+      password:
+        type: string
+      username:
+        type: string
+    type: object
+host: localhost:8080
+info:
+  contact: {}
+  description: This is a simple items API
+  title: Items API
+  version: "1.0"
+paths:
+  /items:
+    get:
+      consumes:
+      - application/json
+      description: Lista os itens com base nos parâmetros fornecidos
+      parameters:
+      - description: Status do item
+        in: query
+        name: status
+        type: string
+      - description: Limite de itens por página
+        in: query
+        name: limit
+        type: integer
+      - description: Página
+        in: query
+        name: page
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/item.Item'
+            type: array
+        "400":
+          description: Limite inválido
+          schema:
+            type: string
+        "500":
+          description: Erro interno do servidor
+          schema:
+            type: string
+      summary: Lista os itens
+      tags:
+      - items
+    post:
+      consumes:
+      - application/json
+      description: Cria um novo item com os dados fornecidos no corpo da requisição
+      parameters:
+      - description: Informações do item
+        in: body
+        name: item
+        required: true
+        schema:
+          $ref: '#/definitions/item.Item'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/item.Item'
+        "500":
+          description: Erro interno do servidor
+          schema:
+            type: string
+      summary: Cria um novo item
+      tags:
+      - items
+  /items/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Deleta um item existente com o ID fornecido
+      parameters:
+      - description: ID do item
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/item.Item'
+        "400":
+          description: ID de Item não encontrado
+          schema:
+            type: string
+        "500":
+          description: Erro interno do servidor
+          schema:
+            type: string
+      summary: Deleta um item existente
+      tags:
+      - items
+    get:
+      consumes:
+      - application/json
+      description: Recupera um item existente com o ID fornecido
+      parameters:
+      - description: ID do item
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/item.Item'
+        "404":
+          description: Item não encontrado
+          schema:
+            type: string
+      summary: Recupera um item pelo ID
+      tags:
+      - items
+    put:
+      consumes:
+      - application/json
+      description: Atualiza um item existente com os dados fornecidos no corpo da
+        requisição
+      parameters:
+      - description: ID do item
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Informações do item
+        in: body
+        name: item
+        required: true
+        schema:
+          $ref: '#/definitions/item.Item'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/item.Item'
+        "404":
+          description: ID de item inválido
+          schema:
+            type: string
+        "500":
+          description: Erro interno do servidor
+          schema:
+            type: string
+      summary: Atualiza um item existente
+      tags:
+      - items
+  /login:
+    post:
+      consumes:
+      - application/json
+      description: Autentica um usuário com as credenciais fornecidas no corpo da
+        requisição
+      parameters:
+      - description: Credenciais do usuário
+        in: body
+        name: user
+        required: true
+        schema:
+          $ref: '#/definitions/user.Credentials'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Token de autenticação
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Credenciais inválidas
+          schema:
+            type: string
+        "401":
+          description: Usuário não encontrado
+          schema:
+            type: string
+        "500":
+          description: Erro interno do servidor
+          schema:
+            type: string
+      summary: Autentica um usuário
+      tags:
+      - auth
+  /register:
+    post:
+      consumes:
+      - application/json
+      description: Cria uma nova conta de usuário com os dados fornecidos no corpo
+        da requisição
+      parameters:
+      - description: Informações do usuário
+        in: body
+        name: user
+        required: true
+        schema:
+          $ref: '#/definitions/user.User'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Usuário criado com sucesso
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Username ou senha é obrigatória
+          schema:
+            type: string
+        "500":
+          description: Erro interno do servidor
+          schema:
+            type: string
+      summary: Registra um novo usuário
+      tags:
+      - auth
+swagger: "2.0"
