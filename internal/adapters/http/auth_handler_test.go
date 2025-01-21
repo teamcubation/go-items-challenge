@@ -62,7 +62,7 @@ func TestAuthHandler_Register_MissingUsername(t *testing.T) {
 	handler.Register(rec, req)
 
 	assert.Equal(t, http.StatusBadRequest, rec.Code)
-	assert.Contains(t, rec.Body.String(), "username is required")
+	assert.Contains(t, rec.Body.String(), "invalid fields username and/or password")
 
 	mockService.AssertNotCalled(t, "RegisterUser", mock.Anything, mock.AnythingOfType("*user.User"))
 }
@@ -85,7 +85,7 @@ func TestAuthHandler_Register_MissingPassword(t *testing.T) {
 	handler.Register(rec, req)
 
 	assert.Equal(t, http.StatusBadRequest, rec.Code)
-	assert.Contains(t, rec.Body.String(), "password is required")
+	assert.Contains(t, rec.Body.String(), "invalid fields username and/or password")
 
 	mockService.AssertNotCalled(t, "RegisterUser", mock.Anything, mock.AnythingOfType("*user.User"))
 }

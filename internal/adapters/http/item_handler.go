@@ -2,6 +2,7 @@ package http
 
 import (
 	"encoding/json"
+	"github.com/teamcubation/go-items-challenge/internal/utils"
 	"net/http"
 	"strconv"
 
@@ -35,7 +36,10 @@ func (h *ItemHandler) CreateItem(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-
+	if err := utils.ValidateStruct(&itm); err != nil {
+		http.Error(w, "missing or invalid fields in the body", http.StatusBadRequest)
+		return
+	}
 	createdItem, err := h.itemService.CreateItem(r.Context(), &itm)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -69,6 +73,10 @@ func (h *ItemHandler) UpdateItem(w http.ResponseWriter, r *http.Request) {
 	var itm item.Item
 	if err := json.NewDecoder(r.Body).Decode(&itm); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	if err := utils.ValidateStruct(&itm); err != nil {
+		http.Error(w, "missing or invalid fields in the body", http.StatusBadRequest)
 		return
 	}
 	itm.ID = id
