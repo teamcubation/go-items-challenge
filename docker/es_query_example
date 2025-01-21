@@ -1,0 +1,316 @@
+PUT /items
+{
+  "mappings": {
+    "properties": {
+      "name": {
+        "type": "text"
+      },
+      "description": {
+        "type": "text"
+      },
+      "price": {
+        "type": "float"
+      },
+      "available": {
+        "type": "boolean"
+      },
+      "categories": {
+        "type": "keyword"
+      },
+     "created_at": { 
+       "type": "date" 
+     }
+    }
+  }
+}
+
+DELETE /items
+
+# guardar item con ID nombre_indice/_doc/ID
+POST /items/_doc/1
+{
+  "name": "Laptop HP",
+  "description": "Portátil con pantalla de 15 pulgadas",
+  "price": 799.99,
+  "available": true,
+  "categories": ["Electrónica", "Informática"],
+  "created_at": "2023-09-10"
+}
+
+# guardo item sin especificar ID
+POST /items/_doc
+{
+  "name": "Teléfono Samsung Galaxy",
+  "provider": "mercado livre",
+  "description": "Smartphone Android de última generación",
+  "price": 599.99,
+  "available": false,
+  "categories": ["Electrónica", "Telefonía"],
+  "created_at": "2023-09-14"
+}
+
+POST /items/_doc/3
+{
+  "name": "Tablet Samsung A54",
+  "description": "Tablet Android de última generación",
+  "price": 699.99,
+  "available": true,
+  "categories": ["Electrónica", "Telefonía"],
+  "created_at": "2023-09-15"
+}
+
+POST /items/_doc
+{
+  "name": "Celular Iphone 16 pro max",
+  "price": 1699.99,
+  "available": true,
+  "categories": ["Telefonía"],
+  "created_at": "2025-01-15"
+}
+
+# Modificar item completo
+POST /items/_doc/3
+{
+  "name": "Tablet Samsung A54",
+  "description": "Tablet Android de última generación",
+  "price": 699.99
+}
+
+# Modificacion parcial de item
+POST /items/_update/3
+{
+  "doc": {
+    "price": 500.99
+  }
+}
+
+#Busquedas
+GET /items/_search
+{
+  "query": {
+    "match_all": {}
+  }
+}
+
+# SELECT * FROM your_table WHERE available = TRUE;
+GET /items/_search
+{
+  "query": {
+    "term": {
+      "available": true
+    }
+  }
+}
+
+# SELECT * FROM your_table WHERE categories = 'Telefonía';
+GET /items/_search
+{
+  "query": {
+    "term": {
+      "categories": "Telefonía"
+    }
+  }
+}
+
+# SELECT * FROM items WHERE name ILIKE '%smartphone%';
+GET /items/_search
+{
+  "query": {
+    "match": {
+      "description": "smartphone"
+    }
+  }
+}
+
+# SELECT *FROM your_table WHERE description ILIKE '%Oscar%' OR description ILIKE '%pulgadas%' OR description ILIKE '%Tablet%';
+GET /items/_search
+{
+  "query": {
+    "match": {
+      "description": "Oscar pulgadas Tablet"
+    }
+  }
+}
+
+# SELECT * FROM items WHERE price BETWEEN 600 AND 20000;
+GET /items/_search
+{
+  "query": {
+    "range": {
+      "price": {
+        "gte": 600,
+        "lte": 20000
+      }
+    }
+  }
+}
+
+# SELECT * FROM your_table ORDER BY price ASC;
+GET /items/_search
+{
+  "query": {
+    "match_all": {}
+  },
+  "sort": [
+    { "price": "asc" }
+  ]
+}
+
+# SELECT * FROM items WHERE description ILIKE '%Android%' AND name ILIKE '%Samsung A54%';
+GET /items/_search
+{
+  "query": {
+    "bool": {
+      "must": [
+        { "match": { "description": "Android" } },
+        { "match": { "name": "Samsung A54" } }
+      ]
+    }
+  }
+}
+
+# # SELECT * FROM items WHERE description ILIKE '%Smartphone%' OR name ILIKE '%Laptop%';
+GET /items/_search
+{
+  "query": {
+    "bool": {
+      "should": [
+        { "match": { "description": "Smartphone" } },
+        { "match": { "name": "Laptop" } }
+      ]
+    }
+  }
+}
+
+
+#Busco documentos que tengan el campo description definido
+GET /items/_search
+{
+  "query": {
+    "exists": {
+      "field": "description"
+    }
+  }
+}
+
+GET /items/_search
+{
+  "query": {
+    "match_phrase": {
+      "name": "laptop HP"
+    }
+  }
+}
+
+POST /items/_count
+{
+  "query": {
+    "match_phrase": {
+      "name": "laptop HP"
+    }
+  }
+}
+
+GET /items/_search
+{
+  "query": {
+    "query_string": {
+      "query": "Laptop OR Smartphone"
+    }
+  }
+}
+
+GET /items/_search
+{
+  "query": {
+    "bool": {
+      "must_not": [
+        { "match": { "available": false } }
+      ]
+    }
+  }
+}
+
+# similar a must pero no se calcula el puntaje
+GET /items/_search
+{
+  "query": {
+    "bool": {
+      "filter": [
+        { "match": { "description": "Android" } },
+        { "match": { "name": "Samsung A54" } }
+      ]
+    }
+  }
+}
+
+GET /items/_search
+{
+  "query": {
+    "bool": {
+      "filter": [
+        { "term": { "available": false } },
+        { "range": { "price": { "gte": 300, "lte": 600 } } }
+      ]
+    }
+  }
+}
+  
+# En Elasticsearch, si deseas que las búsquedas encuentren palabras incluso si están mal escritas o si contiene errores tipográficos, puedes utilizar técnicas de corrección ortográfica y aproximación de texto
+GET /items/_search
+  {
+  "query": {
+    "fuzzy": {
+      "name": {
+        "value": "Suamsung",
+        "fuzziness": "AUTO"
+      }
+    }
+  }
+}
+
+#Sort
+GET /items/_search
+{
+  "size": 10,
+  "query": {
+    "match_all": {}
+  },
+  "sort": {"created_at": "desc"}
+}
+
+#Paginación
+GET /items/_search
+{
+  "from": 1,
+  "size": 10,
+  "query": {
+    "match_all": {}
+  },
+  "sort": {"created_at": "asc"}
+}
+
+POST /items/_search
+{
+  "size": 2,
+  "sort": {"created_at": "asc"}
+}
+
+POST /items/_search
+{
+  "size": 2,
+  "sort": {"created_at": "asc"},
+  "search_after": ["1694649600000"]
+}
+
+# Agregaciones
+POST /items/_search
+{
+  "aggs": {
+    "total_prices": {
+      "sum": {
+        "field": "price"
+      }
+    }
+  }
+}
