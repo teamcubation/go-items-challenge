@@ -25,7 +25,7 @@ func ErrorHandlingMiddleware(next http.Handler) http.Handler {
 					return
 				}
 
-				w.WriteHeader(mapErrorToStatus(err.StatusCode))
+				w.WriteHeader(MapErrorToStatus(err.StatusCode))
 				json.NewEncoder(w).Encode(map[string]interface{}{
 					"code":    err.StatusCode,
 					"message": err.Message,
@@ -38,7 +38,7 @@ func ErrorHandlingMiddleware(next http.Handler) http.Handler {
 	})
 }
 
-func mapErrorToStatus(code int) int {
+func MapErrorToStatus(code int) int {
 	switch code {
 	case 400:
 		return http.StatusBadRequest
