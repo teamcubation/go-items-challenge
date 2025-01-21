@@ -30,6 +30,7 @@ func ErrorHandlingMiddleware(next http.Handler) http.Handler {
 					"code":    err.StatusCode,
 					"message": err.Message,
 					"details": err.Details,
+					"time":    err.Timestamp,
 				})
 			}
 		}()

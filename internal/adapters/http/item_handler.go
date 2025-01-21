@@ -6,6 +6,7 @@ import (
 	"strconv"
 
 	"github.com/gorilla/mux"
+	errs "github.com/teamcubation/go-items-challenge/errors"
 	"github.com/teamcubation/go-items-challenge/internal/domain/item"
 	"github.com/teamcubation/go-items-challenge/internal/ports/in"
 	"github.com/teamcubation/go-items-challenge/pkg/log"
@@ -32,17 +33,26 @@ func NewItemHandler(itemService in.ItemService) *ItemHandler {
 func (h *ItemHandler) CreateItem(w http.ResponseWriter, r *http.Request) {
 	var itm item.Item
 	if err := json.NewDecoder(r.Body).Decode(&itm); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		panic(errs.New(http.StatusBadRequest, "Invalid request payload", map[string]interface{}{
+			"error":   err.Error(),
+			"context": "Decoding request body",
+		}))
 		return
 	}
 
 	createdItem, err := h.itemService.CreateItem(r.Context(), &itm)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		panic(errs.New(http.StatusInternalServerError, "Internal server error", map[string]interface{}{
+			"error":   err.Error(),
+			"context": "Creating item",
+		}))
 		return
 	}
 	if err := json.NewEncoder(w).Encode(createdItem); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		panic(errs.New(http.StatusInternalServerError, "Internal server error", map[string]interface{}{
+			"error":   err.Error(),
+			"context": "Encondig items resposne",
+		}))
 		return
 	}
 }
@@ -63,22 +73,34 @@ func (h *ItemHandler) UpdateItem(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	id, err := strconv.Atoi(vars["id"])
 	if err != nil {
-		http.Error(w, "Invalid item ID", http.StatusBadRequest)
+		panic(errs.New(http.StatusBadRequest, "Invalid item ID", map[string]interface{}{
+			"error":   err.Error(),
+			"context": "Converting item ID to int",
+		}))
 		return
 	}
 	var itm item.Item
 	if err := json.NewDecoder(r.Body).Decode(&itm); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		panic(errs.New(http.StatusBadRequest, "Invalid request payload", map[string]interface{}{
+			"error":   err.Error(),
+			"context": "Decoding request body",
+		}))
 		return
 	}
 	itm.ID = id
 	updatedItem, err := h.itemService.UpdateItem(r.Context(), &itm)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		panic(errs.New(http.StatusInternalServerError, "Internal server error", map[string]interface{}{
+			"error":   err.Error(),
+			"context": "Updating item",
+		}))
 		return
 	}
 	if err := json.NewEncoder(w).Encode(updatedItem); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		panic(errs.New(http.StatusInternalServerError, "Internal server error", map[string]interface{}{
+			"error":   err.Error(),
+			"context": "Encondig items resposne",
+		}))
 		return
 	}
 }
@@ -98,16 +120,25 @@ func (h *ItemHandler) DeleteItem(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	id, err := strconv.Atoi(vars["id"])
 	if err != nil {
-		http.Error(w, "Invalid item ID", http.StatusBadRequest)
+		panic(errs.New(http.StatusBadRequest, "Invalid item ID", map[string]interface{}{
+			"error":   err.Error(),
+			"context": "Converting item ID to int",
+		}))
 		return
 	}
 	deletedItem, err := h.itemService.DeleteItem(r.Context(), id)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		panic(errs.New(http.StatusInternalServerError, "Internal server error", map[string]interface{}{
+			"error":   err.Error(),
+			"context": "Deleting item",
+		}))
 		return
 	}
 	if err := json.NewEncoder(w).Encode(deletedItem); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		panic(errs.New(http.StatusInternalServerError, "Internal server error", map[string]interface{}{
+			"error":   err.Error(),
+			"context": "Encondig items resposne",
+		}))
 		return
 	}
 }
@@ -131,20 +162,32 @@ func (h *ItemHandler) GetItemByID(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	id, err := strconv.Atoi(vars["id"])
 	if err != nil {
-		http.Error(w, "Invalid item ID", http.StatusBadRequest)
+		panic(errs.New(http.StatusBadRequest, "Invalid item ID", map[string]interface{}{
+			"error":   err.Error(),
+			"context": "Converting item ID to int",
+		}))
 		return
 	}
 	itm, err := h.itemService.GetItemByID(r.Context(), id)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusNotFound)
+		panic(errs.New(http.StatusInternalServerError, "Internal server error", map[string]interface{}{
+			"error":   err.Error(),
+			"context": "Getting item by ID",
+		}))
 		return
 	}
 	if itm == nil {
-		http.Error(w, "Item not found", http.StatusNotFound)
+		panic(errs.New(http.StatusNotFound, "Item not found", map[string]interface{}{
+			"error": "Item not found",
+			"hint":  "Check if the id is correct",
+		}))
 		return
 	}
 	if err := json.NewEncoder(w).Encode(itm); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		panic(errs.New(http.StatusInternalServerError, "Internal server error", map[string]interface{}{
+			"error":   err.Error(),
+			"context": "Encondig items resposne",
+		}))
 		return
 	}
 }
@@ -169,22 +212,34 @@ func (h *ItemHandler) ListItems(w http.ResponseWriter, r *http.Request) {
 
 	page, err := strconv.Atoi(r.URL.Query().Get("page"))
 	if err != nil {
-		http.Error(w, "Invalid page", http.StatusBadRequest)
+		panic(errs.New(http.StatusBadRequest, "Invalid input", map[string]interface{}{
+			"field": "Page in URL",
+			"hint":  "Page must be a valid number",
+		}))
 		return
 	}
 
 	limit, err := strconv.Atoi(limitStr)
 	if err != nil {
-		http.Error(w, "Invalid limit", http.StatusBadRequest)
+		panic(errs.New(http.StatusBadRequest, "Invalid input", map[string]interface{}{
+			"field": "Limit in URL",
+			"hint":  "Limit must be a valid number",
+		}))
 		return
 	}
 	items, _, err := h.itemService.ListItems(r.Context(), status, limit, page)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		panic(errs.New(http.StatusInternalServerError, "Internal server error", map[string]interface{}{
+			"error":   err.Error(),
+			"context": "Listing items from itemService",
+		}))
 		return
 	}
 	if err := json.NewEncoder(w).Encode(items); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		panic(errs.New(http.StatusInternalServerError, "Internal server error", map[string]interface{}{
+			"error":   err.Error(),
+			"context": "Encondig items resposne",
+		}))
 		return
 	}
 }
