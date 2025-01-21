@@ -70,12 +70,12 @@ func main() {
 	api := r.PathPrefix("/api").Subrouter()
 	api.Use(middleware.AuthMiddleware)
 
+	api.HandleFunc("/items/export", exportHandler.Export).Methods("GET")
 	api.HandleFunc("/items", itemHandler.CreateItem).Methods("POST")
 	api.HandleFunc("/items/{id}", itemHandler.UpdateItem).Methods("PUT")
 	api.HandleFunc("/items/{id}", itemHandler.DeleteItem).Methods("DELETE")
 	api.HandleFunc("/items/{id}", itemHandler.GetItemByID).Methods("GET")
 	api.HandleFunc("/items", itemHandler.ListItems).Methods("GET")
-	api.HandleFunc("/items/export", exportHandler.Export).Methods("GET")
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()

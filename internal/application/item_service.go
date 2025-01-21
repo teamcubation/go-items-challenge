@@ -93,6 +93,10 @@ func (s *itemService) DeleteItem(ctx context.Context, id int) (*item.Item, error
 }
 
 func (s *itemService) ListItems(ctx context.Context, status string, limit int, page int) ([]*item.Item, int, error) {
+	if status == "" {
+		status = "ACTIVE"
+	}
+
 	items, err := s.repo.ListItems(ctx, status, limit, page)
 	if err != nil {
 		return nil, 0, err
