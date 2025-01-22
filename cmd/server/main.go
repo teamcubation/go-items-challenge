@@ -2,8 +2,8 @@ package main
 
 import (
 	"context"
-	_ "encoding/json"
 	"fmt"
+	"github.com/teamcubation/go-items-challenge/internal/adapters/http/middleware"
 	"log"
 	"net/http"
 	"os"
@@ -11,29 +11,17 @@ import (
 	"syscall"
 	"time"
 
-	_ "github.com/docker/docker/client"
-
-	"github.com/teamcubation/go-items-challenge/internal/application"
-	"github.com/teamcubation/go-items-challenge/internal/domain/user"
-	_ "github.com/teamcubation/go-items-challenge/internal/ports/in"
-	_ "github.com/teamcubation/go-items-challenge/internal/ports/out"
-
-	httpSwagger "github.com/swaggo/http-swagger"
-	_ "github.com/teamcubation/go-items-challenge/docs"
-	"github.com/teamcubation/go-items-challenge/internal/adapters/client"
-	httphdl "github.com/teamcubation/go-items-challenge/internal/adapters/http"
-	"github.com/teamcubation/go-items-challenge/internal/adapters/http/middleware"
-	"github.com/teamcubation/go-items-challenge/internal/adapters/repository"
-	"github.com/teamcubation/go-items-challenge/internal/domain/item"
-
-	_ "github.com/golang-migrate/migrate/v4"
-	_ "github.com/golang-migrate/migrate/v4/database/postgres"
-	_ "github.com/golang-migrate/migrate/v4/source/file"
-	"gorm.io/driver/postgres"
-	"gorm.io/gorm"
-
 	"github.com/gorilla/mux"
 	"github.com/joho/godotenv"
+	httpSwagger "github.com/swaggo/http-swagger"
+	"github.com/teamcubation/go-items-challenge/internal/adapters/client"
+	httphdl "github.com/teamcubation/go-items-challenge/internal/adapters/http"
+	"github.com/teamcubation/go-items-challenge/internal/adapters/repository"
+	"github.com/teamcubation/go-items-challenge/internal/application"
+	"github.com/teamcubation/go-items-challenge/internal/domain/item"
+	"github.com/teamcubation/go-items-challenge/internal/domain/user"
+	"gorm.io/driver/postgres"
+	"gorm.io/gorm"
 )
 
 func runMigrations(db *gorm.DB) {
@@ -43,11 +31,6 @@ func runMigrations(db *gorm.DB) {
 	}
 }
 
-// @title Items API
-// @version 1.0
-// @description This is a simple items API
-// @host localhost:8080
-// @BasePath /api
 func main() {
 	err := godotenv.Load("/app/.env")
 	if err != nil {
@@ -76,6 +59,7 @@ func main() {
 	categoryClient := client.NewCategoryClient("http://mockapi:8000")
 	itemSrv := application.NewItemService(itemRepo, categoryClient)
 	itemHandler := httphdl.NewItemHandler(itemSrv)
+	exportHandler := httphdl.NewExportHandler(itemSrv)
 
 	r := mux.NewRouter()
 
@@ -86,6 +70,7 @@ func main() {
 	api := r.PathPrefix("/api").Subrouter()
 	api.Use(middleware.AuthMiddleware)
 
+	api.HandleFunc("/items/export", exportHandler.Export).Methods("GET")
 	api.HandleFunc("/items", itemHandler.CreateItem).Methods("POST")
 	api.HandleFunc("/items/{id}", itemHandler.UpdateItem).Methods("PUT")
 	api.HandleFunc("/items/{id}", itemHandler.DeleteItem).Methods("DELETE")
