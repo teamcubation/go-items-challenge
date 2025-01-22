@@ -1,4 +1,4 @@
-basePath: /api
+basePath: /v1
 definitions:
   item.Item:
     properties:
@@ -43,11 +43,11 @@ definitions:
       username:
         type: string
     type: object
-host: localhost:8080
+host: localhost:8000
 info:
   contact: {}
-  description: This is a simple items API
-  title: Items API
+  description: API para gerenciar categorias
+  title: Categoria API
   version: "1.0"
 paths:
   /items:

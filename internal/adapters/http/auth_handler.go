@@ -3,13 +3,13 @@ package http
 import (
 	"encoding/json"
 	"errors"
-	"github.com/teamcubation/go-items-challenge/internal/utils"
-	"net/http"
-
+	errs "github.com/teamcubation/go-items-challenge/errors"
 	"github.com/teamcubation/go-items-challenge/internal/application"
 	"github.com/teamcubation/go-items-challenge/internal/domain/user"
 	"github.com/teamcubation/go-items-challenge/internal/ports/in"
+	"github.com/teamcubation/go-items-challenge/internal/utils"
 	"github.com/teamcubation/go-items-challenge/pkg/log"
+	"net/http"
 )
 
 type AuthHandler struct {
@@ -36,26 +36,51 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 
 	var u user.User
 	if err := json.NewDecoder(r.Body).Decode(&u); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		panic(errs.New(http.StatusBadRequest, "Invalid request payload", map[string]interface{}{
+			"error":   err.Error(),
+			"context": "Decoding request body",
+		}))
 		return
 	}
-	if err := utils.ValidateStruct(&u); err != nil {
-		http.Error(w, "invalid fields username and/or password", http.StatusBadRequest)
+
+	if u.Password == "" {
+		panic(errs.New(http.StatusBadRequest, "Password is required", map[string]interface{}{
+			"filed":   "password",
+			"context": "Validating request body",
+		}))
 		return
 	}
+
+	if u.Username == "" {
+		panic(errs.New(http.StatusBadRequest, "Username is required", map[string]interface{}{
+			"filed":   "username",
+			"context": "Validating request body",
+		}))
+		return
+	}
+
 	_, err := h.srv.RegisterUser(ctx, &u)
 	if err != nil {
 		if errors.Is(err, application.ErrUsernameExists) {
-			http.Error(w, "username already exists", http.StatusBadRequest)
+			panic(errs.New(http.StatusBadRequest, "Username already exists", map[string]interface{}{
+				"field":   "username",
+				"context": "Error registering user",
+			}))
 			return
 		}
-		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		panic(errs.New(http.StatusInternalServerError, "Internal server error", map[string]interface{}{
+			"error":   err.Error(),
+			"context": "Registering user",
+		}))
 		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")
 	if err := json.NewEncoder(w).Encode(map[string]string{"message": "User created successfully"}); err != nil {
-		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		panic(errs.New(http.StatusInternalServerError, "Internal server error", map[string]interface{}{
+			"error":   err.Error(),
+			"context": "Encoding response",
+		}))
 		return
 	}
 }
@@ -79,7 +104,18 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 
 	var creds user.Credentials
 	if err := json.NewDecoder(r.Body).Decode(&creds); err != nil {
-		http.Error(w, "Invalid request payload", http.StatusBadRequest)
+		panic(errs.New(http.StatusBadRequest, "Invalid request payload", map[string]interface{}{
+			"error":   err.Error(),
+			"context": "Decoding request body",
+		}))
+		return
+	}
+
+	if creds.Username == "" || creds.Password == "" {
+		panic(errs.New(http.StatusBadRequest, "Username and password must not be empty", map[string]interface{}{
+			"field":   "username/password",
+			"context": "Checking input data",
+		}))
 		return
 	}
 	if err := utils.ValidateStruct(&creds); err != nil {
@@ -89,16 +125,25 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 	token, err := h.srv.Login(ctx, creds)
 	if err != nil {
 		if errors.Is(err, application.ErrUsernameNotFound) {
-			http.Error(w, "Username not found", http.StatusUnauthorized)
+			panic(errs.New(http.StatusUnauthorized, "Invalid credentials", map[string]interface{}{
+				"field":   "username",
+				"context": "Error authenticating user",
+			}))
 			return
 		}
-		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		panic(errs.New(http.StatusInternalServerError, "Internal server error", map[string]interface{}{
+			"error":   err.Error(),
+			"context": "Authenticating user",
+		}))
 		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")
 	if err := json.NewEncoder(w).Encode(map[string]string{"token": token}); err != nil {
-		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		panic(errs.New(http.StatusInternalServerError, "Internal server error", map[string]interface{}{
+			"error":   err.Error(),
+			"context": "Encoding response",
+		}))
 		return
 	}
 }

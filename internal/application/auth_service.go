@@ -52,21 +52,16 @@ func (srv *authService) RegisterUser(ctx context.Context, newUser *user.User) (*
 
 func (srv *authService) Login(ctx context.Context, creds user.Credentials) (string, error) {
 	userFound, err := srv.repo.GetUserByUsername(ctx, creds.Username)
-
-	if userFound.Username != creds.Username {
-		return "", fmt.Errorf("invalid user: %s", creds.Username)
-	}
-
 	if err != nil {
 		return "", fmt.Errorf("error fetching user: %w", err)
 	}
 
-	if userFound == nil {
+	if userFound == nil || userFound.Username != creds.Username {
 		return "", ErrUsernameNotFound
 	}
 
 	if !utils.CheckPasswordHash(creds.Password, userFound.Password) {
-		return "", fmt.Errorf("invalid password: %s", creds.Username)
+		return "", fmt.Errorf("invalid password for user: %s", creds.Username)
 	}
 
 	// Generate token (assuming you have a function to generate JWT tokens)
