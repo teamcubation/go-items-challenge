@@ -5,16 +5,11 @@ import (
 	"fmt"
 	"strings"
 
-	"golang.org/x/crypto/bcrypt"
-
+	errs "github.com/teamcubation/go-items-challenge/internal/domain/errors"
 	"github.com/teamcubation/go-items-challenge/internal/domain/user"
 	"github.com/teamcubation/go-items-challenge/internal/ports/out"
 	"github.com/teamcubation/go-items-challenge/internal/utils"
-)
-
-var (
-	ErrUsernameExists   = fmt.Errorf("username already exists")
-	ErrUsernameNotFound = fmt.Errorf("username not found")
+	"golang.org/x/crypto/bcrypt"
 )
 
 type authService struct {
@@ -32,7 +27,7 @@ func (srv *authService) RegisterUser(ctx context.Context, newUser *user.User) (*
 		return nil, fmt.Errorf("error fetching user: %w", err)
 	}
 	if userFound != nil {
-		return nil, ErrUsernameExists
+		return nil, errs.ErrUsernameExists
 	}
 
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(newUser.Password), bcrypt.DefaultCost)
@@ -57,7 +52,7 @@ func (srv *authService) Login(ctx context.Context, creds user.Credentials) (stri
 	}
 
 	if userFound == nil || userFound.Username != creds.Username {
-		return "", ErrUsernameNotFound
+		return "", errs.ErrUsernameNotFound
 	}
 
 	if !utils.CheckPasswordHash(creds.Password, userFound.Password) {

@@ -2,12 +2,13 @@ package http
 
 import (
 	"encoding/json"
-	"github.com/teamcubation/go-items-challenge/internal/utils"
 	"net/http"
 	"strconv"
 
+	"github.com/teamcubation/go-items-challenge/internal/utils"
+
 	"github.com/gorilla/mux"
-	errs "github.com/teamcubation/go-items-challenge/errors"
+	errs "github.com/teamcubation/go-items-challenge/internal/domain/errors"
 	"github.com/teamcubation/go-items-challenge/internal/domain/item"
 	"github.com/teamcubation/go-items-challenge/internal/ports/in"
 	"github.com/teamcubation/go-items-challenge/pkg/log"
