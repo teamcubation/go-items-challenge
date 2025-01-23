@@ -2,6 +2,7 @@ package client
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"time"
 
@@ -42,15 +43,18 @@ func (c *categoryClient) IsAValidCategory(_ context.Context, id int) (bool, erro
 	var response Category
 
 	// Makes the GET request
-	resp, err := c.client.R().
-		SetResult(&response). // Automatically decodes the response into a Category structure
-		Get(endpoint)
+	resp, err := c.client.R().Get(endpoint)
 	if err != nil {
 		return false, fmt.Errorf("error making GET request: %w", err)
 	}
 
 	if resp.IsError() {
 		return false, fmt.Errorf("error: %s", resp.String())
+	}
+
+	err = json.Unmarshal(resp.Body(), &response)
+	if err != nil {
+		return false, fmt.Errorf("error unmarshaling manually: %s", resp.String())
 	}
 
 	// Returns the decoded category
