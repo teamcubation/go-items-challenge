@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"fmt"
-	"github.com/teamcubation/go-items-challenge/internal/adapters/http/middleware"
 	"log"
 	"net/http"
 	"os"
@@ -16,6 +15,7 @@ import (
 	httpSwagger "github.com/swaggo/http-swagger"
 	"github.com/teamcubation/go-items-challenge/internal/adapters/client"
 	httphdl "github.com/teamcubation/go-items-challenge/internal/adapters/http"
+	"github.com/teamcubation/go-items-challenge/internal/adapters/http/middleware"
 	"github.com/teamcubation/go-items-challenge/internal/adapters/repository"
 	"github.com/teamcubation/go-items-challenge/internal/application"
 	"github.com/teamcubation/go-items-challenge/internal/domain/item"
