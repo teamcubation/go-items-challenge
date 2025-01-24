@@ -49,7 +49,7 @@ func runMigrations(db *gorm.DB) {
 // @host localhost:8080
 // @BasePath /api
 func main() {
-	err := godotenv.Load("/app/.env")
+	err := godotenv.Load(".env")
 	if err != nil {
 		log.Fatalf("Error loading .env file: %v", err)
 	}
