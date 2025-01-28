@@ -102,6 +102,10 @@ func (s *itemService) ListItems(ctx context.Context, status string, limit int, p
 	logger := log.GetFromContext(ctx)
 	logger.Info("Entering ItemService: ListItems()")
 
+	if status == "" {
+		status = "ACTIVE"
+	}
+
 	items, err := s.repo.ListItems(ctx, status, limit, page)
 	if err != nil {
 		return nil, 0, presenter.ErrFetchingItem
