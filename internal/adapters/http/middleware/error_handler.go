@@ -2,48 +2,55 @@ package middleware
 
 import (
 	"encoding/json"
-	"github.com/teamcubation/go-items-challenge/errors"
+	"errors"
+	"github.com/teamcubation/go-items-challenge/internal/adapters/http/presenter"
+	"log"
 	"net/http"
 )
-
-type ErrorResponse struct {
-	Code    int    `json:"code"`
-	Message string `json:"message"`
-}
 
 func ErrorHandlingMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		defer func() {
 			if rec := recover(); rec != nil {
-				err, ok := rec.(*errors.CustomError)
+				log.Printf("panic recovered: %v", rec)
+				err, ok := rec.(error)
 				if !ok {
 					w.WriteHeader(http.StatusInternalServerError)
 					json.NewEncoder(w).Encode(map[string]interface{}{
-						"code":    http.StatusInternalServerError,
+						"code":    "ERR_INTERNAL_SERVER",
 						"message": "Internal server error",
 					})
 					return
 				}
-
-				w.WriteHeader(MapErrorToStatus(err.StatusCode))
-				json.NewEncoder(w).Encode(map[string]interface{}{
-					"code":    err.StatusCode,
-					"message": err.Message,
-					"details": err.Details,
-					"time":    err.Timestamp,
-				})
+				handleError(w, err)
 			}
 		}()
 		next.ServeHTTP(w, r)
 	})
 }
 
-func MapErrorToStatus(code int) int {
+func handleError(w http.ResponseWriter, err error) {
+	var customErr *presenter.CustomError
+	if errors.As(err, &customErr) {
+		w.WriteHeader(mapErrorToStatus(customErr.Code))
+		json.NewEncoder(w).Encode(customErr)
+	} else {
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"code":    "ERR_INTERNAL_SERVER",
+			"message": "Internal server error",
+		})
+	}
+}
+
+func mapErrorToStatus(code string) int {
 	switch code {
-	case 400:
+	case "ERR_VALIDATION", "ERR_INVALID_REQUEST_BODY":
 		return http.StatusBadRequest
-	case 404:
-		return http.StatusNotFound
+	case "ERR_USERNAME_NOT_FOUND", "ERR_INVALID_CREDENTIALS":
+		return http.StatusUnauthorized
+	case "ERR_USERNAME_EXISTS":
+		return http.StatusConflict
 	default:
 		return http.StatusInternalServerError
 	}

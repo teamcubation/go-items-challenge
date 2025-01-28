@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	errs "github.com/teamcubation/go-items-challenge/internal/domain/error"
+	"github.com/teamcubation/go-items-challenge/internal/adapters/http/presenter"
 	"github.com/teamcubation/go-items-challenge/internal/domain/item"
 	"github.com/teamcubation/go-items-challenge/internal/ports/out"
 	"github.com/teamcubation/go-items-challenge/pkg/log"
@@ -21,20 +21,20 @@ func NewItemService(repo out.ItemRepository, client out.CategoryClient) *itemSer
 
 func (s *itemService) CreateItem(ctx context.Context, item *item.Item) (*item.Item, error) {
 	if item.Code == "" {
-		return nil, errs.ErrRequestBody
+		return nil, presenter.ErrMissingFields
 	}
 
 	// calling the client to validate the category
 	isValid, err := s.client.IsAValidCategory(ctx, item.CategoryID)
 	if err != nil {
-		return nil, errs.ErrClientError
+		return nil, presenter.ErrInvalidRequestBody
 	}
 	if !isValid {
-		return nil, errs.ErrInvalidCategory
+		return nil, presenter.ErrInvalidCategory
 	}
 
 	if s.repo.ItemExistsByCode(ctx, item.Code) {
-		return nil, errs.ErrCodeExists
+		return nil, presenter.ErrCodeExists
 	}
 	item.ID = generateID()
 	item.Status = determineStatus(item.Stock)
@@ -49,10 +49,10 @@ func (s *itemService) GetItemByID(ctx context.Context, id int) (*item.Item, erro
 
 	itm, err := s.repo.GetItemByID(ctx, id)
 	if err != nil {
-		return nil, errs.ErrFetchingItem
+		return nil, presenter.ErrFetchingItem
 	}
 	if itm == nil {
-		return nil, errs.ErrItemNotFound
+		return nil, presenter.ErrItemNotFound
 	}
 	return itm, nil
 }
@@ -60,10 +60,10 @@ func (s *itemService) GetItemByID(ctx context.Context, id int) (*item.Item, erro
 func (s *itemService) UpdateItem(ctx context.Context, updatedItem *item.Item) (*item.Item, error) {
 	existingItem, err := s.repo.GetItemByID(ctx, updatedItem.ID)
 	if err != nil {
-		return nil, errs.ErrFetchingItem
+		return nil, presenter.ErrFetchingItem
 	}
 	if existingItem == nil {
-		return nil, errs.ErrItemNotFound
+		return nil, presenter.ErrItemNotFound
 	}
 
 	// Retain original values if new values are not provided
@@ -82,7 +82,7 @@ func (s *itemService) UpdateItem(ctx context.Context, updatedItem *item.Item) (*
 
 	result, err := s.repo.UpdateItem(ctx, updatedItem)
 	if err != nil {
-		return nil, errs.ErrUpdatingItem
+		return nil, presenter.ErrUpdatingItem
 	}
 	return result, nil
 }
@@ -92,7 +92,7 @@ func (s *itemService) DeleteItem(ctx context.Context, id int) (*item.Item, error
 	logger.Info("Entering ItemService: DeleteItem()")
 
 	if _, err := s.repo.GetItemByID(ctx, id); err != nil {
-		return nil, errs.ErrFetchingItem
+		return nil, presenter.ErrFetchingItem
 	}
 
 	return s.repo.DeleteItem(ctx, id)
@@ -104,7 +104,7 @@ func (s *itemService) ListItems(ctx context.Context, status string, limit int, p
 
 	items, err := s.repo.ListItems(ctx, status, limit, page)
 	if err != nil {
-		return nil, 0, errs.ErrFetchingItems
+		return nil, 0, presenter.ErrFetchingItem
 	}
 
 	totalPages := (len(items.Data) + limit - 1) / limit

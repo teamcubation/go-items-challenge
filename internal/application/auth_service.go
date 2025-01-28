@@ -6,7 +6,7 @@ import (
 
 	"golang.org/x/crypto/bcrypt"
 
-	errs "github.com/teamcubation/go-items-challenge/internal/domain/error"
+	"github.com/teamcubation/go-items-challenge/internal/adapters/http/presenter"
 	"github.com/teamcubation/go-items-challenge/internal/domain/user"
 	"github.com/teamcubation/go-items-challenge/internal/ports/out"
 	"github.com/teamcubation/go-items-challenge/internal/utils"
@@ -24,23 +24,23 @@ func (srv *authService) RegisterUser(ctx context.Context, newUser *user.User) (*
 	lowerUsername := strings.ToLower(newUser.Username)
 	userFound, err := srv.repo.GetUserByUsername(ctx, lowerUsername)
 	if err != nil {
-		return nil, errs.ErrFetchingUser
+		return nil, presenter.ErrFetchingUser
 	}
 
 	if userFound != nil {
-		return nil, errs.ErrUsernameExists
+		return nil, presenter.ErrUsernameExists
 	}
 
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(newUser.Password), bcrypt.DefaultCost)
 	if err != nil {
-		return nil, errs.ErrHashingPassword
+		return nil, presenter.ErrHashingPassword
 	}
 
 	newUser.Username = strings.ToUpper(string(newUser.Username[0])) + strings.ToLower(newUser.Username[1:])
 	newUser.Password = string(hashedPassword)
 
 	if err := srv.repo.CreateUser(ctx, newUser); err != nil {
-		return nil, errs.ErrCreatingUser
+		return nil, presenter.ErrCreatingUser
 	}
 
 	return newUser, nil
@@ -49,21 +49,21 @@ func (srv *authService) RegisterUser(ctx context.Context, newUser *user.User) (*
 func (srv *authService) Login(ctx context.Context, creds user.Credentials) (string, error) {
 	userFound, err := srv.repo.GetUserByUsername(ctx, creds.Username)
 	if err != nil {
-		return "", errs.ErrFetchingUser
+		return "", presenter.ErrFetchingUser
 	}
 
 	if userFound == nil || userFound.Username != creds.Username {
-		return "", errs.ErrUsernameNotFound
+		return "", presenter.ErrUsernameNotFound
 	}
 
 	if !utils.CheckPasswordHash(creds.Password, userFound.Password) {
-		return "", errs.ErrHashingPassword
+		return "", presenter.ErrHashingPassword
 	}
 
 	// Generate token (assuming you have a function to generate JWT tokens)
 	token, err := utils.GenerateToken(userFound.ID)
 	if err != nil {
-		return "", errs.ErrTokenGeneration
+		return "", presenter.ErrTokenGeneration
 	}
 
 	return token, nil

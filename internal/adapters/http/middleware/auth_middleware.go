@@ -2,6 +2,7 @@ package middleware
 
 import (
 	"context"
+	"github.com/teamcubation/go-items-challenge/internal/adapters/http/presenter"
 	"net/http"
 	"strings"
 
@@ -25,8 +26,7 @@ func AuthMiddleware(next http.Handler) http.Handler {
 
 		tokenString := r.Header.Get("Authorization")
 		if tokenString == "" {
-			http.Error(w, "Missing token", http.StatusUnauthorized)
-			return
+			panic(presenter.New("ERR_UNAUTHORIZED", "Missing authorization header", nil))
 		}
 
 		tokenString = strings.TrimPrefix(tokenString, "Bearer ")
@@ -36,11 +36,10 @@ func AuthMiddleware(next http.Handler) http.Handler {
 			return JwtKey, nil
 		})
 		if err != nil || !token.Valid {
-			http.Error(w, "Invalid token", http.StatusUnauthorized)
-			return
+			panic(presenter.New("ERR_UNAUTHORIZED", "Invalid token", nil))
 		}
 		if claims.UserID == 0 {
-			http.Error(w, "Invalid token", http.StatusUnauthorized)
+			panic(presenter.New("ERR_UNAUTHORIZED", "Invalid token", nil))
 			return
 		}
 		ctx := context.WithValue(r.Context(), UserContextKey, claims.UserID)

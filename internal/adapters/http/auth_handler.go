@@ -2,10 +2,8 @@ package http
 
 import (
 	"encoding/json"
-	"errors"
 	"github.com/teamcubation/go-items-challenge/internal/adapters/http/presenter"
 
-	customerror "github.com/teamcubation/go-items-challenge/internal/domain/error"
 	"github.com/teamcubation/go-items-challenge/internal/domain/user"
 	"github.com/teamcubation/go-items-challenge/internal/ports/in"
 	"github.com/teamcubation/go-items-challenge/internal/utils"
@@ -37,64 +35,28 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 
 	var u user.User
 	if err := json.NewDecoder(r.Body).Decode(&u); err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-
-		response := presenter.NewErrorResponse(http.StatusBadRequest, "Invalid request payload", map[string]interface{}{
-			"error":   err.Error(),
-			"context": "Decoding request body",
-		})
-
-		json.NewEncoder(w).Encode(response)
-		return
+		panic(presenter.New("ERR_INVALID_REQUEST_BODY", "Invalid request payload", map[string]interface{}{
+			"error": err.Error(),
+		}))
 	}
 
 	if u.Username == "" || u.Password == "" {
-		w.WriteHeader(http.StatusBadRequest)
-
-		response := presenter.NewErrorResponse(http.StatusBadRequest, "Username and password are required", map[string]interface{}{
-			"field":   "username",
-			"context": "Username and password are required",
-		})
-
-		json.NewEncoder(w).Encode(response)
-		return
+		panic(presenter.New("ERR_INVALID_REQUEST_BODY", "Username and password are required", map[string]interface{}{
+			"fields": []string{"username", "password"},
+			"error":  "Username and password are required",
+		}))
 	}
 
 	_, err := h.srv.RegisterUser(ctx, &u)
 	if err != nil {
-		if errors.Is(err, customerror.ErrUsernameExists) {
-			w.WriteHeader(http.StatusBadRequest)
-
-			response := presenter.NewErrorResponse(http.StatusBadRequest, "Username already exists", map[string]interface{}{
-				"field":   "username",
-				"context": "Username already exists",
-			})
-
-			json.NewEncoder(w).Encode(response)
-			return
-		}
-		w.WriteHeader(http.StatusInternalServerError)
-
-		response := presenter.NewErrorResponse(http.StatusInternalServerError, "Internal server error", map[string]interface{}{
-			"error":   err.Error(),
-			"context": "Creating user",
-		})
-
-		json.NewEncoder(w).Encode(response)
-		return
+		panic(err)
 	}
 
 	w.Header().Set("Content-Type", "application/json")
 	if err := json.NewEncoder(w).Encode(map[string]string{"message": "User created successfully"}); err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-
-		response := presenter.NewErrorResponse(http.StatusInternalServerError, "Internal server error", map[string]interface{}{
-			"error":   err.Error(),
-			"context": "Encoding response",
-		})
-
-		json.NewEncoder(w).Encode(response)
-		return
+		panic(presenter.New("ERR_INTERNAL_SERVER", "Internal server error", map[string]interface{}{
+			"error": err.Error(),
+		}))
 	}
 }
 
@@ -117,71 +79,30 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 
 	var creds user.Credentials
 	if err := json.NewDecoder(r.Body).Decode(&creds); err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-
-		response := presenter.NewErrorResponse(http.StatusBadRequest, "Invalid request payload", map[string]interface{}{
-			"error":   err.Error(),
-			"context": "Decoding request body",
-		})
-
-		json.NewEncoder(w).Encode(response)
-		return
+		panic(presenter.New("ERR_INVALID_REQUEST_BODY", "Invalid request payload", map[string]interface{}{
+			"error": err.Error(),
+		}))
 	}
 
 	if creds.Username == "" || creds.Password == "" {
-		w.WriteHeader(http.StatusBadRequest)
-
-		response := presenter.NewErrorResponse(http.StatusBadRequest, "Username and password are required", map[string]interface{}{
-			"context": "Username and password are required",
-		})
-
-		json.NewEncoder(w).Encode(response)
-		return
+		panic(presenter.New("ERR_INVALID_REQUEST_BODY", "Username and password are required", map[string]interface{}{
+			"fields": []string{"username", "password"},
+			"error":  "Username and password are required",
+		}))
 	}
 	if err := utils.ValidateStruct(&creds); err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-
-		response := presenter.NewErrorResponse(http.StatusBadRequest, "Invalid request payload", map[string]interface{}{
-			"error":   err.Error(),
-			"context": "missing or invalid fields in the body",
-		})
-
-		json.NewEncoder(w).Encode(response)
-		return
+		panic(presenter.New("ERR_INVALID_REQUEST_BODY", "Invalid request payload", map[string]interface{}{
+			"error": err.Error(),
+		}))
 	}
 	token, err := h.srv.Login(ctx, creds)
 	if err != nil {
-		handleLoginError(w, err, creds.Username)
-		return
+		panic(err)
 	}
 
 	if err := json.NewEncoder(w).Encode(map[string]string{"token": token}); err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-
-		response := presenter.NewErrorResponse(http.StatusInternalServerError, customerror.ErrInternalServer.Error(), map[string]interface{}{
-			"error":   err.Error(),
-			"context": customerror.ErrEncodingResponse,
-		})
-		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(response)
+		panic(presenter.New("ERR_INTERNAL_SERVER", "Internal server error", map[string]interface{}{
+			"error": err.Error(),
+		}))
 	}
-}
-
-func handleLoginError(w http.ResponseWriter, err error, username string) {
-	if errors.Is(err, customerror.ErrUsernameNotFound) {
-		response := presenter.NewErrorResponse(http.StatusUnauthorized, customerror.ErrUsernameNotFound.Error(), map[string]interface{}{
-			"field":   "username",
-			"context": customerror.ErrUsernameNotFound,
-		})
-		w.WriteHeader(http.StatusUnauthorized)
-		json.NewEncoder(w).Encode(response)
-		return
-	}
-
-	response := presenter.NewErrorResponse(http.StatusInternalServerError, customerror.ErrInternalServer.Error(), map[string]interface{}{
-		"error":   err.Error(),
-		"context": customerror.ErrTokenGeneration,
-	})
-	w.WriteHeader(http.StatusInternalServerError)
-	json.NewEncoder(w).Encode(response)
 }
