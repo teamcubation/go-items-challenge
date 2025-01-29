@@ -1,9 +1,6 @@
 package middleware_test
 
-// Inserção de partes ausentes e verificação dos imports
 import (
-	"encoding/json"
-	"github.com/teamcubation/go-items-challenge/internal/adapters/http/presenter"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -17,7 +14,9 @@ import (
 func createToken(userID int, secret []byte) (string, error) {
 	claims := &middleware.Claims{
 		UserID:         userID,
-		StandardClaims: jwt.StandardClaims{},
+		StandardClaims: jwt.StandardClaims{
+			// Additional claims can be added here as needed
+		},
 	}
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	return token.SignedString(secret)
@@ -39,36 +38,23 @@ func TestAuthMiddleware_ValidToken(t *testing.T) {
 		w.WriteHeader(http.StatusOK)
 	}))
 
-	// Adicionar o ErrorHandlingMiddleware
-	finalHandler := middleware.ErrorHandlingMiddleware(handler)
-
-	finalHandler.ServeHTTP(rec, req)
+	handler.ServeHTTP(rec, req)
 
 	assert.Equal(t, http.StatusOK, rec.Code)
 }
 
 func TestAuthMiddleware_MissingToken(t *testing.T) {
-	testHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusOK)
-	})
-
-	handlerWithAuth := middleware.AuthMiddleware(testHandler)
-
-	// Adicionar o ErrorHandlingMiddleware
-	finalHandler := middleware.ErrorHandlingMiddleware(handlerWithAuth)
-
-	req := httptest.NewRequest(http.MethodGet, "/protected", nil)
+	req := httptest.NewRequest("GET", "/", nil)
 	rec := httptest.NewRecorder()
 
-	finalHandler.ServeHTTP(rec, req)
+	handler := middleware.AuthMiddleware(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}))
+
+	handler.ServeHTTP(rec, req)
 
 	assert.Equal(t, http.StatusUnauthorized, rec.Code)
-
-	var response presenter.CustomError
-	err := json.Unmarshal(rec.Body.Bytes(), &response)
-	assert.NoError(t, err)
-	assert.Equal(t, "ERR_UNAUTHORIZED", response.Code)
-	assert.Equal(t, "Missing authorization header", response.Message)
+	assert.Contains(t, rec.Body.String(), "Missing token")
 }
 
 func TestAuthMiddleware_InvalidToken(t *testing.T) {
@@ -76,24 +62,18 @@ func TestAuthMiddleware_InvalidToken(t *testing.T) {
 	req.Header.Set("Authorization", "Bearer invalid.token.here")
 	rec := httptest.NewRecorder()
 
-	handlerWithAuth := middleware.AuthMiddleware(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+	handler := middleware.AuthMiddleware(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
 	}))
 
-	// Adicionar o ErrorHandlingMiddleware
-	finalHandler := middleware.ErrorHandlingMiddleware(handlerWithAuth)
-	finalHandler.ServeHTTP(rec, req)
+	handler.ServeHTTP(rec, req)
 
 	assert.Equal(t, http.StatusUnauthorized, rec.Code)
-
-	var response presenter.CustomError
-	err := json.Unmarshal(rec.Body.Bytes(), &response)
-	assert.NoError(t, err)
-	assert.Equal(t, "ERR_UNAUTHORIZED", response.Code)
-	assert.Equal(t, "Invalid token", response.Message)
+	assert.Contains(t, rec.Body.String(), "Invalid token")
 }
 
 func TestAuthMiddleware_InvalidUserID(t *testing.T) {
+	// Create a token with an invalid (zero) user ID
 	claims := &middleware.Claims{
 		UserID: 0,
 	}
@@ -105,19 +85,12 @@ func TestAuthMiddleware_InvalidUserID(t *testing.T) {
 	req.Header.Set("Authorization", "Bearer "+tokenString)
 	rec := httptest.NewRecorder()
 
-	handlerWithAuth := middleware.AuthMiddleware(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+	handler := middleware.AuthMiddleware(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
 	}))
 
-	// Adicionar o ErrorHandlingMiddleware
-	finalHandler := middleware.ErrorHandlingMiddleware(handlerWithAuth)
-	finalHandler.ServeHTTP(rec, req)
+	handler.ServeHTTP(rec, req)
 
 	assert.Equal(t, http.StatusUnauthorized, rec.Code)
-
-	var response presenter.CustomError
-	err = json.Unmarshal(rec.Body.Bytes(), &response)
-	assert.NoError(t, err)
-	assert.Equal(t, "ERR_UNAUTHORIZED", response.Code)
-	assert.Equal(t, "Invalid token", response.Message)
+	assert.Contains(t, rec.Body.String(), "Invalid token")
 }

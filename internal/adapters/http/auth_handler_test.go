@@ -3,44 +3,36 @@ package http_test
 import (
 	"bytes"
 	"encoding/json"
-	"github.com/teamcubation/go-items-challenge/internal/adapters/http/middleware"
-	"github.com/teamcubation/go-items-challenge/internal/adapters/http/presenter"
+	http2 "github.com/teamcubation/go-items-challenge/internal/adapters/http"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
-	http2 "github.com/teamcubation/go-items-challenge/internal/adapters/http"
-
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+	"github.com/teamcubation/go-items-challenge/internal/adapters/http/presenter"
+	"github.com/teamcubation/go-items-challenge/internal/domain"
 	"github.com/teamcubation/go-items-challenge/internal/domain/user"
 	"github.com/teamcubation/go-items-challenge/internal/ports/in/mocks"
 )
-
-func executeRequest(req *http.Request, handlerFunc http.HandlerFunc) *httptest.ResponseRecorder {
-	rr := httptest.NewRecorder()
-	handler := middleware.ErrorHandlingMiddleware(handlerFunc)
-	handler.ServeHTTP(rr, req)
-	return rr
-}
 
 func TestAuthHandler_Register_Success(t *testing.T) {
 	mockService := new(mocks.AuthService)
 	handler := http2.NewAuthHandler(mockService)
 
-	// Simule uma requisição válida
 	inputUser := &user.User{
 		Username: "testuser",
 		Password: "password123",
 	}
+
 	mockService.On("RegisterUser", mock.Anything, mock.AnythingOfType("*user.User")).Return(inputUser, nil)
 
 	reqBody, _ := json.Marshal(inputUser)
 	req := httptest.NewRequest(http.MethodPost, "/register", bytes.NewReader(reqBody))
 	req.Header.Set("Content-Type", "application/json")
 
-	// Use executeRequest
-	rec := executeRequest(req, handler.Register)
+	rec := httptest.NewRecorder()
+	handler.Register(rec, req)
 
 	assert.Equal(t, http.StatusOK, rec.Code)
 	var response map[string]string
@@ -55,7 +47,6 @@ func TestAuthHandler_Register_MissingUsername(t *testing.T) {
 	mockService := new(mocks.AuthService)
 	handler := http2.NewAuthHandler(mockService)
 
-	// Entrada do usuário sem username
 	inputUser := &user.User{
 		Password: "password123",
 	}
@@ -64,18 +55,16 @@ func TestAuthHandler_Register_MissingUsername(t *testing.T) {
 	req := httptest.NewRequest(http.MethodPost, "/register", bytes.NewReader(reqBody))
 	req.Header.Set("Content-Type", "application/json")
 
-	// Use executeRequest
-	rec := executeRequest(req, handler.Register)
+	rec := httptest.NewRecorder()
+	handler.Register(rec, req)
 
-	// Verifique o código de status e a resposta
 	assert.Equal(t, http.StatusBadRequest, rec.Code)
 
 	var customErr presenter.CustomError
 	err := json.Unmarshal(rec.Body.Bytes(), &customErr)
 	assert.NoError(t, err)
-	assert.Equal(t, "ERR_INVALID_REQUEST_BODY", customErr.Code)
+	assert.Equal(t, "ERR_BAD_REQUEST", customErr.Code)
 	assert.Equal(t, "Username and password are required", customErr.Message)
-	assert.Contains(t, customErr.Details["fields"], "username")
 }
 
 func TestAuthHandler_Register_MissingPassword(t *testing.T) {
@@ -90,16 +79,16 @@ func TestAuthHandler_Register_MissingPassword(t *testing.T) {
 	req := httptest.NewRequest(http.MethodPost, "/register", bytes.NewReader(reqBody))
 	req.Header.Set("Content-Type", "application/json")
 
-	rec := executeRequest(req, handler.Register)
+	rec := httptest.NewRecorder()
+	handler.Register(rec, req)
 
 	assert.Equal(t, http.StatusBadRequest, rec.Code)
 
 	var customErr presenter.CustomError
 	err := json.Unmarshal(rec.Body.Bytes(), &customErr)
 	assert.NoError(t, err)
-	assert.Equal(t, "ERR_INVALID_REQUEST_BODY", customErr.Code)
+	assert.Equal(t, "ERR_BAD_REQUEST", customErr.Code)
 	assert.Equal(t, "Username and password are required", customErr.Message)
-	assert.Contains(t, customErr.Details["fields"], "password")
 }
 
 func TestAuthHandler_Register_UsernameExists(t *testing.T) {
@@ -111,14 +100,14 @@ func TestAuthHandler_Register_UsernameExists(t *testing.T) {
 		Password: "password123",
 	}
 
-	mockService.On("RegisterUser", mock.Anything, mock.AnythingOfType("*user.User")).Return(nil, presenter.ErrUsernameExists)
+	mockService.On("RegisterUser", mock.Anything, mock.AnythingOfType("*user.User")).Return(nil, domain.ErrUsernameExists)
 
 	reqBody, _ := json.Marshal(inputUser)
 	req := httptest.NewRequest(http.MethodPost, "/register", bytes.NewReader(reqBody))
 	req.Header.Set("Content-Type", "application/json")
 
-	// Use executeRequest
-	rec := executeRequest(req, handler.Register)
+	rec := httptest.NewRecorder()
+	handler.Register(rec, req)
 
 	assert.Equal(t, http.StatusConflict, rec.Code)
 

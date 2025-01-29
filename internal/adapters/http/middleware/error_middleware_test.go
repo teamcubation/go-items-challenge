@@ -2,6 +2,7 @@ package middleware_test
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -12,44 +13,36 @@ import (
 )
 
 func TestErrorHandlingMiddleware_CustomError(t *testing.T) {
-	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		panic(presenter.New("ERR_BAD_REQUEST", "Bad request", map[string]interface{}{
-			"field": "username",
-		}))
-	})
-
-	testHandler := middleware.ErrorHandlingMiddleware(handler)
-	req := httptest.NewRequest(http.MethodGet, "/", nil)
 	rec := httptest.NewRecorder()
 
-	testHandler.ServeHTTP(rec, req)
+	// Simule o uso da função ErrorHandlingMiddleware diretamente.
+	err := presenter.New("ERR_BAD_REQUEST", "Bad request", map[string]interface{}{
+		"field": "username",
+	})
+	middleware.ErrorHandlingMiddleware(rec, err)
 
 	assert.Equal(t, http.StatusBadRequest, rec.Code)
 
 	var response map[string]interface{}
-	err := json.Unmarshal(rec.Body.Bytes(), &response)
-	assert.NoError(t, err)
+	unmarshalErr := json.Unmarshal(rec.Body.Bytes(), &response)
+	assert.NoError(t, unmarshalErr)
 	assert.Equal(t, "ERR_BAD_REQUEST", response["code"])
 	assert.Equal(t, "Bad request", response["message"])
 	assert.Equal(t, "username", response["details"].(map[string]interface{})["field"])
 }
 
 func TestErrorHandlingMiddleware_NonCustomError(t *testing.T) {
-	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		panic("unexpected error")
-	})
-
-	testHandler := middleware.ErrorHandlingMiddleware(handler)
-	req := httptest.NewRequest(http.MethodGet, "/", nil)
 	rec := httptest.NewRecorder()
 
-	testHandler.ServeHTTP(rec, req)
+	// Aqui passamos um erro genérico para ver como o middleware lida com isso.
+	err := errors.New("unexpected error")
+	middleware.ErrorHandlingMiddleware(rec, err)
 
 	assert.Equal(t, http.StatusInternalServerError, rec.Code)
 
 	var response map[string]interface{}
-	err := json.Unmarshal(rec.Body.Bytes(), &response)
-	assert.NoError(t, err)
+	unmarshalErr := json.Unmarshal(rec.Body.Bytes(), &response)
+	assert.NoError(t, unmarshalErr)
 	assert.Equal(t, "ERR_INTERNAL_SERVER", response["code"])
 	assert.Equal(t, "Internal server error", response["message"])
 }

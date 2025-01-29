@@ -2,6 +2,9 @@ package http
 
 import (
 	"encoding/json"
+	"errors"
+	"github.com/teamcubation/go-items-challenge/internal/adapters/http/middleware"
+	"github.com/teamcubation/go-items-challenge/internal/domain"
 	"github.com/teamcubation/go-items-challenge/internal/utils"
 	"net/http"
 	"strconv"
@@ -34,21 +37,41 @@ func NewItemHandler(itemService in.ItemService) *ItemHandler {
 func (h *ItemHandler) CreateItem(w http.ResponseWriter, r *http.Request) {
 	var itm item.Item
 	if err := json.NewDecoder(r.Body).Decode(&itm); err != nil {
-		panic(presenter.New("ERR_MISSING_FIELDS", "Invalid request payload", map[string]interface{}{
+		middleware.ErrorHandlingMiddleware(w, presenter.New("ERR_INVALID_REQUEST_BODY", "Invalid request payload", map[string]interface{}{
 			"error": "Check all missing fields and try again",
 		}))
+		return
 	}
 	if err := utils.ValidateStruct(&itm); err != nil {
-		panic(presenter.New("ERR_MISSING_FIELDS", "Invalid request payload", map[string]interface{}{
+		middleware.ErrorHandlingMiddleware(w, presenter.New("ERR_INVALID_REQUEST_BODY", "Invalid request payload", map[string]interface{}{
 			"error": "Check all missing fields and try again",
 		}))
+		return
 	}
 	createdItem, err := h.itemService.CreateItem(r.Context(), &itm)
 	if err != nil {
-		panic(err)
+		if errors.Is(err, domain.ErrItemNotFound) { //trocar para domain tirar de presenter
+			middleware.ErrorHandlingMiddleware(w, presenter.New("ERR_ITEM_NOT_FOUND", "Item not found", map[string]interface{}{
+				"error": "Check item code",
+			}))
+			return
+		}
+
+		if errors.Is(err, domain.ErrInvalidCategory) {
+			middleware.ErrorHandlingMiddleware(w, presenter.New("ERR_INVALID_CATEGORY", "Invalid category", map[string]interface{}{
+				"error": "Check category",
+			}))
+			return
+		}
+
+		middleware.ErrorHandlingMiddleware(w, presenter.New("ERR_INTERNAL_SERVER", "Internal server error", map[string]interface{}{
+			"error": err.Error(),
+		}))
+		return
 	}
+	w.Header().Set("Content-Type", "application/json")
 	if err := json.NewEncoder(w).Encode(createdItem); err != nil {
-		panic(presenter.New("ERR_INTERNAL_SERVER", "Internal server error", map[string]interface{}{
+		middleware.ErrorHandlingMiddleware(w, presenter.New("ERR_INTERNAL_SERVER", "Internal server error", map[string]interface{}{
 			"error": err.Error(),
 		}))
 	}
@@ -70,30 +93,51 @@ func (h *ItemHandler) UpdateItem(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	id, err := strconv.Atoi(vars["id"])
 	if err != nil {
-		panic(presenter.New("ERR_INVALID_REQUEST_BODY", "Invalid request payload", map[string]interface{}{
-			"error": err.Error(),
+		middleware.ErrorHandlingMiddleware(w, presenter.New("ERR_INVALID_ID", "Invalid ID format", map[string]interface{}{
+			"error": "Check ID format",
 		}))
+		return
 	}
 	var itm item.Item
 	if err := json.NewDecoder(r.Body).Decode(&itm); err != nil {
-		panic(presenter.New("ERR_INVALID_REQUEST_BODY", "Invalid request payload", map[string]interface{}{
-			"error": err.Error(),
+		middleware.ErrorHandlingMiddleware(w, presenter.New("ERR_INVALID_REQUEST_BODY", "Invalid request payload", map[string]interface{}{
+			"error": "Check all missing fields and try again",
 		}))
+		return
 	}
 	if err := utils.ValidateStruct(&itm); err != nil {
-		panic(presenter.New("ERR_INVALID_REQUEST_BODY", "Invalid request payload", map[string]interface{}{
-			"error": err.Error(),
+		middleware.ErrorHandlingMiddleware(w, presenter.New("ERR_INVALID_REQUEST_BODY", "Invalid request payload", map[string]interface{}{
+			"error": "Check all missing fields and try again",
 		}))
+		return
 	}
 	itm.ID = id
 	updatedItem, err := h.itemService.UpdateItem(r.Context(), &itm)
 	if err != nil {
-		panic(err)
-	}
-	if err := json.NewEncoder(w).Encode(updatedItem); err != nil {
-		panic(presenter.New("ERR_INTERNAL_SERVER", "Internal server error", map[string]interface{}{
+		if errors.Is(err, domain.ErrItemNotFound) {
+			middleware.ErrorHandlingMiddleware(w, presenter.New("ERR_ITEM_NOT_FOUND", "Item not found", map[string]interface{}{
+				"error": "Check item code",
+			}))
+			return
+		}
+		if errors.Is(err, domain.ErrInvalidCategory) {
+			middleware.ErrorHandlingMiddleware(w, presenter.New("ERR_INVALID_CATEGORY", "Invalid category", map[string]interface{}{
+				"error": "Check category",
+			}))
+			return
+		}
+
+		middleware.ErrorHandlingMiddleware(w, presenter.New("ERR_INTERNAL_SERVER", "Internal server error", map[string]interface{}{
 			"error": err.Error(),
 		}))
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	if err := json.NewEncoder(w).Encode(updatedItem); err != nil {
+		middleware.ErrorHandlingMiddleware(w, presenter.New("ERR_INTERNAL_SERVER", "Internal server error", map[string]interface{}{
+			"error": err.Error(),
+		}))
+		return
 	}
 }
 
@@ -112,18 +156,31 @@ func (h *ItemHandler) DeleteItem(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	id, err := strconv.Atoi(vars["id"])
 	if err != nil {
-		panic(presenter.New("ERR_INVALID_REQUEST_BODY", "Invalid request payload", map[string]interface{}{
-			"error": err.Error(),
+		middleware.ErrorHandlingMiddleware(w, presenter.New("ERR_INVALID_ID", "Invalid ID format", map[string]interface{}{
+			"error": "Check ID format",
 		}))
+		return
 	}
 	deletedItem, err := h.itemService.DeleteItem(r.Context(), id)
 	if err != nil {
-		panic(err)
-	}
-	if err := json.NewEncoder(w).Encode(deletedItem); err != nil {
-		panic(presenter.New("ERR_INTERNAL_SERVER", "Internal server error", map[string]interface{}{
+		if errors.Is(err, domain.ErrItemNotFound) {
+			middleware.ErrorHandlingMiddleware(w, presenter.New("ERR_ITEM_NOT_FOUND", "Item not found", map[string]interface{}{
+				"error": "Check item code",
+			}))
+			return
+		}
+
+		middleware.ErrorHandlingMiddleware(w, presenter.New("ERR_INTERNAL_SERVER", "Internal server error", map[string]interface{}{
 			"error": err.Error(),
 		}))
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	if err := json.NewEncoder(w).Encode(deletedItem); err != nil {
+		middleware.ErrorHandlingMiddleware(w, presenter.New("ERR_INTERNAL_SERVER", "Internal server error", map[string]interface{}{
+			"error": err.Error(),
+		}))
+		return
 	}
 }
 
@@ -146,23 +203,31 @@ func (h *ItemHandler) GetItemByID(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	id, err := strconv.Atoi(vars["id"])
 	if err != nil {
-		panic(presenter.New("ERR_INVALID_REQUEST_BODY", "Invalid request payload", map[string]interface{}{
-			"error": err.Error(),
+		middleware.ErrorHandlingMiddleware(w, presenter.New("ERR_INVALID_ID", "Invalid ID format", map[string]interface{}{
+			"error": "Check ID format",
 		}))
+		return
 	}
 	itm, err := h.itemService.GetItemByID(r.Context(), id)
 	if err != nil {
-		panic(err)
-	}
-	if itm == nil {
-		panic(presenter.New("ERR_INVALID_REQUEST_BODY", "Invalid request payload", map[string]interface{}{
-			"error": "Item not found",
-		}))
-	}
-	if err := json.NewEncoder(w).Encode(itm); err != nil {
-		panic(presenter.New("ERR_INTERNAL_SERVER", "Internal server error", map[string]interface{}{
+		if errors.Is(err, domain.ErrItemNotFound) {
+			middleware.ErrorHandlingMiddleware(w, presenter.New("ERR_ITEM_NOT_FOUND", "Item not found", map[string]interface{}{
+				"error": "Check item code",
+			}))
+			return
+		}
+
+		middleware.ErrorHandlingMiddleware(w, presenter.New("ERR_INTERNAL_SERVER", "Internal server error", map[string]interface{}{
 			"error": err.Error(),
 		}))
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	if err := json.NewEncoder(w).Encode(itm); err != nil {
+		middleware.ErrorHandlingMiddleware(w, presenter.New("ERR_INTERNAL_SERVER", "Internal server error", map[string]interface{}{
+			"error": err.Error(),
+		}))
+		return
 	}
 }
 
@@ -183,29 +248,37 @@ func (h *ItemHandler) GetItemByID(w http.ResponseWriter, r *http.Request) {
 func (h *ItemHandler) ListItems(w http.ResponseWriter, r *http.Request) {
 	status := r.URL.Query().Get("status")
 	limitStr := r.URL.Query().Get("limit")
+	pageStr := r.URL.Query().Get("page")
 
-	page, err := strconv.Atoi(r.URL.Query().Get("page"))
+	page, err := strconv.Atoi(pageStr)
 	if err != nil {
-		panic(presenter.New("ERR_INVALID_REQUEST_BODY", "Invalid request payload", map[string]interface{}{
-			"error": err.Error(),
+		middleware.ErrorHandlingMiddleware(w, presenter.New("ERR_INVALID_PAGE", "Invalid page number", map[string]interface{}{
+			"error": "Check page number",
 		}))
+		return
 	}
 
 	limit, err := strconv.Atoi(limitStr)
 	if err != nil {
-		panic(presenter.New("ERR_INVALID_REQUEST_BODY", "Invalid request payload", map[string]interface{}{
-			"error": err.Error(),
+		middleware.ErrorHandlingMiddleware(w, presenter.New("ERR_INVALID_LIMIT", "Invalid limit number", map[string]interface{}{
+			"error": "Check limit number",
 		}))
+		return
 	}
 
 	items, _, err := h.itemService.ListItems(r.Context(), status, limit, page)
 	if err != nil {
-		panic(err)
-	}
-
-	if err := json.NewEncoder(w).Encode(items); err != nil {
-		panic(presenter.New("ERR_INTERNAL_SERVER", "Internal server error", map[string]interface{}{
+		middleware.ErrorHandlingMiddleware(w, presenter.New("ERR_INTERNAL_SERVER", "Internal server error", map[string]interface{}{
 			"error": err.Error(),
 		}))
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	if err := json.NewEncoder(w).Encode(items); err != nil {
+		middleware.ErrorHandlingMiddleware(w, presenter.New("ERR_INTERNAL_SERVER", "Internal server error", map[string]interface{}{
+			"error": err.Error(),
+		}))
+		return
 	}
 }

@@ -2,8 +2,10 @@ package http
 
 import (
 	"encoding/json"
+	"errors"
+	"github.com/teamcubation/go-items-challenge/internal/adapters/http/middleware"
 	"github.com/teamcubation/go-items-challenge/internal/adapters/http/presenter"
-
+	"github.com/teamcubation/go-items-challenge/internal/domain"
 	"github.com/teamcubation/go-items-challenge/internal/domain/user"
 	"github.com/teamcubation/go-items-challenge/internal/ports/in"
 	"github.com/teamcubation/go-items-challenge/internal/utils"
@@ -35,26 +37,37 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 
 	var u user.User
 	if err := json.NewDecoder(r.Body).Decode(&u); err != nil {
-		panic(presenter.New("ERR_INVALID_REQUEST_BODY", "Invalid request payload", map[string]interface{}{
-			"error": err.Error(),
+		middleware.ErrorHandlingMiddleware(w, presenter.New("ERR_INVALID_REQUEST_BODY", "Invalid request payload", map[string]interface{}{
+			"error": "Check all missing fields and try again",
 		}))
+		return
 	}
 
 	if u.Username == "" || u.Password == "" {
-		panic(presenter.New("ERR_INVALID_REQUEST_BODY", "Username and password are required", map[string]interface{}{
-			"fields": []string{"username", "password"},
-			"error":  "Username and password are required",
+		middleware.ErrorHandlingMiddleware(w, presenter.New("ERR_BAD_REQUEST", "Username and password are required", map[string]interface{}{
+			"error": "Check all missing fields and try again",
 		}))
+		return
 	}
 
 	_, err := h.srv.RegisterUser(ctx, &u)
 	if err != nil {
-		panic(err)
+		if errors.Is(err, domain.ErrUsernameExists) {
+			middleware.ErrorHandlingMiddleware(w, presenter.New("ERR_USERNAME_EXISTS", "Username already exists", map[string]interface{}{
+				"error": "Try to login instead",
+			}))
+			return
+		}
+
+		middleware.ErrorHandlingMiddleware(w, presenter.New("ERR_INTERNAL_SERVER", "Internal server error", map[string]interface{}{
+			"error": err.Error(),
+		}))
+		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")
 	if err := json.NewEncoder(w).Encode(map[string]string{"message": "User created successfully"}); err != nil {
-		panic(presenter.New("ERR_INTERNAL_SERVER", "Internal server error", map[string]interface{}{
+		middleware.ErrorHandlingMiddleware(w, presenter.New("ERR_INTERNAL_SERVER", "Internal server error", map[string]interface{}{
 			"error": err.Error(),
 		}))
 	}
@@ -79,30 +92,45 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 
 	var creds user.Credentials
 	if err := json.NewDecoder(r.Body).Decode(&creds); err != nil {
-		panic(presenter.New("ERR_INVALID_REQUEST_BODY", "Invalid request payload", map[string]interface{}{
-			"error": err.Error(),
+		middleware.ErrorHandlingMiddleware(w, presenter.New("ERR_INVALID_REQUEST_BODY", "Invalid request payload", map[string]interface{}{
+			"error": "Check all missing fields and try again",
 		}))
+		return
 	}
 
 	if creds.Username == "" || creds.Password == "" {
-		panic(presenter.New("ERR_INVALID_REQUEST_BODY", "Username and password are required", map[string]interface{}{
-			"fields": []string{"username", "password"},
-			"error":  "Username and password are required",
+		middleware.ErrorHandlingMiddleware(w, presenter.New("ERR_BAD_REQUEST", "Username and password are required", map[string]interface{}{
+			"error": "Check all missing fields and try again",
 		}))
+		return
 	}
 	if err := utils.ValidateStruct(&creds); err != nil {
-		panic(presenter.New("ERR_INVALID_REQUEST_BODY", "Invalid request payload", map[string]interface{}{
-			"error": err.Error(),
+		middleware.ErrorHandlingMiddleware(w, presenter.New("ERR_INVALID_REQUEST_BODY", "Invalid request payload", map[string]interface{}{
+			"error": "Check all missing fields and try again",
 		}))
-	}
-	token, err := h.srv.Login(ctx, creds)
-	if err != nil {
-		panic(err)
+		return
 	}
 
-	if err := json.NewEncoder(w).Encode(map[string]string{"token": token}); err != nil {
-		panic(presenter.New("ERR_INTERNAL_SERVER", "Internal server error", map[string]interface{}{
+	token, err := h.srv.Login(ctx, creds)
+	if err != nil {
+		if errors.Is(err, domain.ErrUsernameNotFound) {
+			middleware.ErrorHandlingMiddleware(w, presenter.New("ERR_USERNAME_NOT_FOUND", "Username not found", map[string]interface{}{
+				"error": "Check username or create a new user",
+			}))
+			return
+		}
+
+		middleware.ErrorHandlingMiddleware(w, presenter.New("ERR_INTERNAL_SERVER", "Internal server error", map[string]interface{}{
 			"error": err.Error(),
 		}))
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	if err := json.NewEncoder(w).Encode(map[string]string{"token": token}); err != nil {
+		middleware.ErrorHandlingMiddleware(w, presenter.New("ERR_INTERNAL_SERVER", "Internal server error", map[string]interface{}{
+			"error": err.Error(),
+		}))
+		return
 	}
 }

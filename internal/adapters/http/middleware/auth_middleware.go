@@ -26,7 +26,10 @@ func AuthMiddleware(next http.Handler) http.Handler {
 
 		tokenString := r.Header.Get("Authorization")
 		if tokenString == "" {
-			panic(presenter.New("ERR_UNAUTHORIZED", "Missing authorization header", nil))
+			ErrorHandlingMiddleware(w, presenter.New("ERR_UNAUTHORIZED", "Missing token", map[string]interface{}{
+				"field": "Authorization required",
+			}))
+			return
 		}
 
 		tokenString = strings.TrimPrefix(tokenString, "Bearer ")
@@ -36,10 +39,15 @@ func AuthMiddleware(next http.Handler) http.Handler {
 			return JwtKey, nil
 		})
 		if err != nil || !token.Valid {
-			panic(presenter.New("ERR_UNAUTHORIZED", "Invalid token", nil))
+			ErrorHandlingMiddleware(w, presenter.New("ERR_UNAUTHORIZED", "Invalid token", map[string]interface{}{
+				"error": "Token is not valid",
+			}))
+			return
 		}
 		if claims.UserID == 0 {
-			panic(presenter.New("ERR_UNAUTHORIZED", "Invalid token", nil))
+			ErrorHandlingMiddleware(w, presenter.New("ERR_UNAUTHORIZED", "Invalid token", map[string]interface{}{
+				"error": "Token is not valid",
+			}))
 			return
 		}
 		ctx := context.WithValue(r.Context(), UserContextKey, claims.UserID)
