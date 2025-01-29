@@ -2,32 +2,25 @@ package middleware
 
 import (
 	"encoding/json"
-	"github.com/teamcubation/go-items-challenge/internal/adapters/http/presenter"
 	"net/http"
+
+	"github.com/teamcubation/go-items-challenge/internal/adapters/http/presenter"
 )
 
-func ErrorHandlingMiddleware(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		defer func() {
-			if err := recover(); err != nil {
-				var customErr *presenter.CustomError
-				switch t := err.(type) {
-				case *presenter.CustomError:
-					customErr = t
-				default:
-					customErr = presenter.New("ERR_INTERNAL_SERVER", "Internal server error", nil)
-				}
+func ErrorHandlingMiddleware(w http.ResponseWriter, err error) {
+	var customErr *presenter.CustomError
+	switch t := err.(type) {
+	case *presenter.CustomError:
+		customErr = t
+	default:
+		customErr = presenter.New("ERR_INTERNAL_SERVER", "Internal server error", nil)
+	}
 
-				// Mapear o código de erro para o status HTTP apropriado
-				statusCode := MapErrorToStatus(customErr.Code)
+	statusCode := MapErrorToStatus(customErr.Code)
 
-				w.Header().Set("Content-Type", "application/json")
-				w.WriteHeader(statusCode)
-				json.NewEncoder(w).Encode(customErr)
-			}
-		}()
-		next.ServeHTTP(w, r)
-	})
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(statusCode)
+	json.NewEncoder(w).Encode(customErr)
 }
 
 func MapErrorToStatus(code string) int {

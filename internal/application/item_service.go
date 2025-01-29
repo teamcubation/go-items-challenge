@@ -2,9 +2,11 @@ package application
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/teamcubation/go-items-challenge/internal/adapters/http/presenter"
+	"github.com/teamcubation/go-items-challenge/internal/domain"
 	"github.com/teamcubation/go-items-challenge/internal/domain/item"
 	"github.com/teamcubation/go-items-challenge/internal/ports/out"
 	"github.com/teamcubation/go-items-challenge/pkg/log"
@@ -21,25 +23,26 @@ func NewItemService(repo out.ItemRepository, client out.CategoryClient) *itemSer
 
 func (s *itemService) CreateItem(ctx context.Context, item *item.Item) (*item.Item, error) {
 	if item.Code == "" {
-		return nil, presenter.ErrMissingFields
+		return nil, domain.ErrMissingFields
 	}
 
 	// calling the client to validate the category
 	isValid, err := s.client.IsAValidCategory(ctx, item.CategoryID)
 	if err != nil {
-		return nil, presenter.ErrInvalidRequestBody
+		return nil, fmt.Errorf("error fetching category: %w", err)
 	}
 	if !isValid {
-		return nil, presenter.ErrInvalidCategory
+		return nil, domain.ErrInvalidCategory
 	}
 
 	if s.repo.ItemExistsByCode(ctx, item.Code) {
-		return nil, presenter.ErrCodeExists
+		return nil, domain.ErrCodeExists
 	}
 	item.ID = generateID()
 	item.Status = determineStatus(item.Stock)
 	item.CreatedAt = time.Now()
 	item.UpdatedAt = time.Now()
+
 	return s.repo.CreateItem(ctx, item)
 }
 

@@ -2,11 +2,15 @@ package http
 
 import (
 	"encoding/json"
-	"github.com/teamcubation/go-items-challenge/internal/utils"
+	"errors"
 	"net/http"
 	"strconv"
 
+	"github.com/teamcubation/go-items-challenge/internal/domain"
+	"github.com/teamcubation/go-items-challenge/internal/utils"
+
 	"github.com/gorilla/mux"
+	"github.com/teamcubation/go-items-challenge/internal/adapters/http/middleware"
 	"github.com/teamcubation/go-items-challenge/internal/adapters/http/presenter"
 	"github.com/teamcubation/go-items-challenge/internal/domain/item"
 	"github.com/teamcubation/go-items-challenge/internal/ports/in"
@@ -33,22 +37,37 @@ func NewItemHandler(itemService in.ItemService) *ItemHandler {
 // @Router /items [post]
 func (h *ItemHandler) CreateItem(w http.ResponseWriter, r *http.Request) {
 	var itm item.Item
+
 	if err := json.NewDecoder(r.Body).Decode(&itm); err != nil {
-		panic(presenter.New("ERR_MISSING_FIELDS", "Invalid request payload", map[string]interface{}{
+		middleware.ErrorHandlingMiddleware(w, presenter.New("ERR_MISSING_FIELDS", "Invalid request payload", map[string]interface{}{
 			"error": "Check all missing fields and try again",
 		}))
+		return
 	}
 	if err := utils.ValidateStruct(&itm); err != nil {
-		panic(presenter.New("ERR_MISSING_FIELDS", "Invalid request payload", map[string]interface{}{
+		middleware.ErrorHandlingMiddleware(w, presenter.New("ERR_MISSING_FIELDS", "Invalid request payload", map[string]interface{}{
 			"error": "Check all missing fields and try again",
 		}))
+		return
 	}
+
 	createdItem, err := h.itemService.CreateItem(r.Context(), &itm)
 	if err != nil {
-		panic(err)
+		if errors.Is(err, domain.ErrItemNotFound) {
+			middleware.ErrorHandlingMiddleware(w, presenter.New("ERR_ITEM_NOT_FOUND", "item not found", map[string]interface{}{
+				"error": "Check item code",
+			}))
+			return
+		}
+
+		middleware.ErrorHandlingMiddleware(w, presenter.New("ERR_INTERNAL_SERVER", "Internal server error", map[string]interface{}{
+			"error": err.Error(),
+		}))
+		return
 	}
+
 	if err := json.NewEncoder(w).Encode(createdItem); err != nil {
-		panic(presenter.New("ERR_INTERNAL_SERVER", "Internal server error", map[string]interface{}{
+		middleware.ErrorHandlingMiddleware(w, presenter.New("ERR_INTERNAL_SERVER", "Internal server error", map[string]interface{}{
 			"error": err.Error(),
 		}))
 	}
