@@ -1,6 +1,9 @@
 package middleware_test
 
+// Inserção de partes ausentes e verificação dos imports
 import (
+	"encoding/json"
+	"github.com/teamcubation/go-items-challenge/internal/adapters/http/presenter"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -14,9 +17,7 @@ import (
 func createToken(userID int, secret []byte) (string, error) {
 	claims := &middleware.Claims{
 		UserID:         userID,
-		StandardClaims: jwt.StandardClaims{
-			// Additional claims can be added here as needed
-		},
+		StandardClaims: jwt.StandardClaims{},
 	}
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	return token.SignedString(secret)
@@ -38,23 +39,36 @@ func TestAuthMiddleware_ValidToken(t *testing.T) {
 		w.WriteHeader(http.StatusOK)
 	}))
 
-	handler.ServeHTTP(rec, req)
+	// Adicionar o ErrorHandlingMiddleware
+	finalHandler := middleware.ErrorHandlingMiddleware(handler)
+
+	finalHandler.ServeHTTP(rec, req)
 
 	assert.Equal(t, http.StatusOK, rec.Code)
 }
 
 func TestAuthMiddleware_MissingToken(t *testing.T) {
-	req := httptest.NewRequest("GET", "/", nil)
+	testHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	})
+
+	handlerWithAuth := middleware.AuthMiddleware(testHandler)
+
+	// Adicionar o ErrorHandlingMiddleware
+	finalHandler := middleware.ErrorHandlingMiddleware(handlerWithAuth)
+
+	req := httptest.NewRequest(http.MethodGet, "/protected", nil)
 	rec := httptest.NewRecorder()
 
-	handler := middleware.AuthMiddleware(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-		w.WriteHeader(http.StatusOK)
-	}))
-
-	handler.ServeHTTP(rec, req)
+	finalHandler.ServeHTTP(rec, req)
 
 	assert.Equal(t, http.StatusUnauthorized, rec.Code)
-	assert.Contains(t, rec.Body.String(), "Missing token")
+
+	var response presenter.CustomError
+	err := json.Unmarshal(rec.Body.Bytes(), &response)
+	assert.NoError(t, err)
+	assert.Equal(t, "ERR_UNAUTHORIZED", response.Code)
+	assert.Equal(t, "Missing authorization header", response.Message)
 }
 
 func TestAuthMiddleware_InvalidToken(t *testing.T) {
@@ -62,18 +76,24 @@ func TestAuthMiddleware_InvalidToken(t *testing.T) {
 	req.Header.Set("Authorization", "Bearer invalid.token.here")
 	rec := httptest.NewRecorder()
 
-	handler := middleware.AuthMiddleware(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+	handlerWithAuth := middleware.AuthMiddleware(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
 	}))
 
-	handler.ServeHTTP(rec, req)
+	// Adicionar o ErrorHandlingMiddleware
+	finalHandler := middleware.ErrorHandlingMiddleware(handlerWithAuth)
+	finalHandler.ServeHTTP(rec, req)
 
 	assert.Equal(t, http.StatusUnauthorized, rec.Code)
-	assert.Contains(t, rec.Body.String(), "Invalid token")
+
+	var response presenter.CustomError
+	err := json.Unmarshal(rec.Body.Bytes(), &response)
+	assert.NoError(t, err)
+	assert.Equal(t, "ERR_UNAUTHORIZED", response.Code)
+	assert.Equal(t, "Invalid token", response.Message)
 }
 
 func TestAuthMiddleware_InvalidUserID(t *testing.T) {
-	// Create a token with an invalid (zero) user ID
 	claims := &middleware.Claims{
 		UserID: 0,
 	}
@@ -85,12 +105,19 @@ func TestAuthMiddleware_InvalidUserID(t *testing.T) {
 	req.Header.Set("Authorization", "Bearer "+tokenString)
 	rec := httptest.NewRecorder()
 
-	handler := middleware.AuthMiddleware(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+	handlerWithAuth := middleware.AuthMiddleware(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
 	}))
 
-	handler.ServeHTTP(rec, req)
+	// Adicionar o ErrorHandlingMiddleware
+	finalHandler := middleware.ErrorHandlingMiddleware(handlerWithAuth)
+	finalHandler.ServeHTTP(rec, req)
 
 	assert.Equal(t, http.StatusUnauthorized, rec.Code)
-	assert.Contains(t, rec.Body.String(), "Invalid token")
+
+	var response presenter.CustomError
+	err = json.Unmarshal(rec.Body.Bytes(), &response)
+	assert.NoError(t, err)
+	assert.Equal(t, "ERR_UNAUTHORIZED", response.Code)
+	assert.Equal(t, "Invalid token", response.Message)
 }

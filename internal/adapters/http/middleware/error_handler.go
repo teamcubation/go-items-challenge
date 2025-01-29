@@ -2,50 +2,39 @@ package middleware
 
 import (
 	"encoding/json"
-	"errors"
 	"github.com/teamcubation/go-items-challenge/internal/adapters/http/presenter"
-	"log"
 	"net/http"
 )
 
 func ErrorHandlingMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		defer func() {
-			if rec := recover(); rec != nil {
-				log.Printf("panic recovered: %v", rec)
-				err, ok := rec.(error)
-				if !ok {
-					w.WriteHeader(http.StatusInternalServerError)
-					json.NewEncoder(w).Encode(map[string]interface{}{
-						"code":    "ERR_INTERNAL_SERVER",
-						"message": "Internal server error",
-					})
-					return
+			if err := recover(); err != nil {
+				var customErr *presenter.CustomError
+				switch t := err.(type) {
+				case *presenter.CustomError:
+					customErr = t
+				default:
+					customErr = presenter.New("ERR_INTERNAL_SERVER", "Internal server error", nil)
 				}
-				handleError(w, err)
+
+				// Mapear o código de erro para o status HTTP apropriado
+				statusCode := MapErrorToStatus(customErr.Code)
+
+				w.Header().Set("Content-Type", "application/json")
+				w.WriteHeader(statusCode)
+				json.NewEncoder(w).Encode(customErr)
 			}
 		}()
 		next.ServeHTTP(w, r)
 	})
 }
 
-func handleError(w http.ResponseWriter, err error) {
-	var customErr *presenter.CustomError
-	if errors.As(err, &customErr) {
-		w.WriteHeader(mapErrorToStatus(customErr.Code))
-		json.NewEncoder(w).Encode(customErr)
-	} else {
-		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(map[string]interface{}{
-			"code":    "ERR_INTERNAL_SERVER",
-			"message": "Internal server error",
-		})
-	}
-}
-
-func mapErrorToStatus(code string) int {
+func MapErrorToStatus(code string) int {
 	switch code {
-	case "ERR_VALIDATION", "ERR_INVALID_REQUEST_BODY":
+	case "ERR_UNAUTHORIZED":
+		return http.StatusUnauthorized
+	case "ERR_VALIDATION", "ERR_INVALID_REQUEST_BODY", "ERR_BAD_REQUEST":
 		return http.StatusBadRequest
 	case "ERR_USERNAME_NOT_FOUND", "ERR_INVALID_CREDENTIALS":
 		return http.StatusUnauthorized

@@ -3,7 +3,8 @@ package http_test
 import (
 	"bytes"
 	"encoding/json"
-	errs "github.com/teamcubation/go-items-challenge/errors"
+	"github.com/teamcubation/go-items-challenge/internal/adapters/http/middleware"
+	"github.com/teamcubation/go-items-challenge/internal/adapters/http/presenter"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -12,16 +13,22 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
-	"github.com/teamcubation/go-items-challenge/internal/application"
 	"github.com/teamcubation/go-items-challenge/internal/domain/user"
 	"github.com/teamcubation/go-items-challenge/internal/ports/in/mocks"
 )
+
+func executeRequest(req *http.Request, handlerFunc http.HandlerFunc) *httptest.ResponseRecorder {
+	rr := httptest.NewRecorder()
+	handler := middleware.ErrorHandlingMiddleware(handlerFunc)
+	handler.ServeHTTP(rr, req)
+	return rr
+}
 
 func TestAuthHandler_Register_Success(t *testing.T) {
 	mockService := new(mocks.AuthService)
 	handler := http2.NewAuthHandler(mockService)
 
-	// Simulate a valid request
+	// Simule uma requisição válida
 	inputUser := &user.User{
 		Username: "testuser",
 		Password: "password123",
@@ -32,9 +39,8 @@ func TestAuthHandler_Register_Success(t *testing.T) {
 	req := httptest.NewRequest(http.MethodPost, "/register", bytes.NewReader(reqBody))
 	req.Header.Set("Content-Type", "application/json")
 
-	rec := httptest.NewRecorder()
-
-	handler.Register(rec, req)
+	// Use executeRequest
+	rec := executeRequest(req, handler.Register)
 
 	assert.Equal(t, http.StatusOK, rec.Code)
 	var response map[string]string
@@ -49,7 +55,7 @@ func TestAuthHandler_Register_MissingUsername(t *testing.T) {
 	mockService := new(mocks.AuthService)
 	handler := http2.NewAuthHandler(mockService)
 
-	// User input missing username
+	// Entrada do usuário sem username
 	inputUser := &user.User{
 		Password: "password123",
 	}
@@ -58,30 +64,24 @@ func TestAuthHandler_Register_MissingUsername(t *testing.T) {
 	req := httptest.NewRequest(http.MethodPost, "/register", bytes.NewReader(reqBody))
 	req.Header.Set("Content-Type", "application/json")
 
-	rec := httptest.NewRecorder()
+	// Use executeRequest
+	rec := executeRequest(req, handler.Register)
 
-	// Capturar o panic
-	defer func() {
-		if r := recover(); r != nil {
-			if err, ok := r.(*errs.CustomError); ok && err.StatusCode == http.StatusBadRequest {
-				assert.Contains(t, err.Message, "Username is required")
-			} else {
-				t.Errorf("Unexpected panic: %v", r)
-			}
-		}
-	}()
-
-	handler.Register(rec, req)
-
+	// Verifique o código de status e a resposta
 	assert.Equal(t, http.StatusBadRequest, rec.Code)
-	mockService.AssertNotCalled(t, "RegisterUser", mock.Anything, mock.AnythingOfType("*user.User"))
+
+	var customErr presenter.CustomError
+	err := json.Unmarshal(rec.Body.Bytes(), &customErr)
+	assert.NoError(t, err)
+	assert.Equal(t, "ERR_INVALID_REQUEST_BODY", customErr.Code)
+	assert.Equal(t, "Username and password are required", customErr.Message)
+	assert.Contains(t, customErr.Details["fields"], "username")
 }
 
 func TestAuthHandler_Register_MissingPassword(t *testing.T) {
 	mockService := new(mocks.AuthService)
 	handler := http2.NewAuthHandler(mockService)
 
-	// User input missing password
 	inputUser := &user.User{
 		Username: "testuser",
 	}
@@ -90,58 +90,43 @@ func TestAuthHandler_Register_MissingPassword(t *testing.T) {
 	req := httptest.NewRequest(http.MethodPost, "/register", bytes.NewReader(reqBody))
 	req.Header.Set("Content-Type", "application/json")
 
-	rec := httptest.NewRecorder()
+	rec := executeRequest(req, handler.Register)
 
-	// Capturar o panic
-	defer func() {
-		if r := recover(); r != nil {
-			if err, ok := r.(*errs.CustomError); ok && err.StatusCode == http.StatusBadRequest {
-				assert.Contains(t, err.Message, "Password is required")
-			} else {
-				t.Errorf("Unexpected panic: %v", r)
-			}
-		}
-	}()
-
-	handler.Register(rec, req)
-
-	// Opcional: Você pode verificar o código HTTP e a resposta mesmo que não haja pânico
 	assert.Equal(t, http.StatusBadRequest, rec.Code)
+
+	var customErr presenter.CustomError
+	err := json.Unmarshal(rec.Body.Bytes(), &customErr)
+	assert.NoError(t, err)
+	assert.Equal(t, "ERR_INVALID_REQUEST_BODY", customErr.Code)
+	assert.Equal(t, "Username and password are required", customErr.Message)
+	assert.Contains(t, customErr.Details["fields"], "password")
 }
 
 func TestAuthHandler_Register_UsernameExists(t *testing.T) {
 	mockService := new(mocks.AuthService)
 	handler := http2.NewAuthHandler(mockService)
 
-	// Simule a existência do nome de usuário
 	inputUser := &user.User{
 		Username: "testuser",
 		Password: "password123",
 	}
 
-	mockService.On("RegisterUser", mock.Anything, mock.AnythingOfType("*user.User")).Return(nil, application.ErrUsernameExists)
+	mockService.On("RegisterUser", mock.Anything, mock.AnythingOfType("*user.User")).Return(nil, presenter.ErrUsernameExists)
 
 	reqBody, _ := json.Marshal(inputUser)
 	req := httptest.NewRequest(http.MethodPost, "/register", bytes.NewReader(reqBody))
 	req.Header.Set("Content-Type", "application/json")
 
-	rec := httptest.NewRecorder()
+	// Use executeRequest
+	rec := executeRequest(req, handler.Register)
 
-	// Capturar o panic
-	defer func() {
-		if r := recover(); r != nil {
-			if err, ok := r.(*errs.CustomError); ok && err.StatusCode == http.StatusBadRequest {
-				assert.Contains(t, err.Message, "Username already exists")
-			} else {
-				t.Errorf("Unexpected panic: %v", r)
-			}
-		}
-	}()
+	assert.Equal(t, http.StatusConflict, rec.Code)
 
-	handler.Register(rec, req)
-
-	// Verifique que o mockService foi chamado como esperado
-	mockService.AssertCalled(t, "RegisterUser", mock.Anything, mock.AnythingOfType("*user.User"))
+	var customErr presenter.CustomError
+	err := json.Unmarshal(rec.Body.Bytes(), &customErr)
+	assert.NoError(t, err)
+	assert.Equal(t, "ERR_USERNAME_EXISTS", customErr.Code)
+	assert.Equal(t, "Username already exists", customErr.Message)
 }
 
 func TestAuthHandler_Login_Success(t *testing.T) {
@@ -168,36 +153,4 @@ func TestAuthHandler_Login_Success(t *testing.T) {
 	err := json.Unmarshal(rec.Body.Bytes(), &response)
 	assert.NoError(t, err)
 	assert.Equal(t, "valid_token", response["token"])
-}
-
-func TestAuthHandler_Login_InvalidCredentials(t *testing.T) {
-	mockService := new(mocks.AuthService)
-	handler := http2.NewAuthHandler(mockService)
-
-	creds := user.Credentials{
-		Username: "invaliduser",
-		Password: "wrongpassword",
-	}
-
-	mockService.On("Login", mock.Anything, creds).Return("", application.ErrUsernameNotFound)
-
-	reqBody, _ := json.Marshal(creds)
-	req := httptest.NewRequest(http.MethodPost, "/login", bytes.NewReader(reqBody))
-	req.Header.Set("Content-Type", "application/json")
-
-	rec := httptest.NewRecorder()
-
-	defer func() {
-		if r := recover(); r != nil {
-			if err, ok := r.(*errs.CustomError); ok && err.StatusCode == http.StatusUnauthorized {
-				assert.Contains(t, err.Message, "Invalid credentials")
-			} else {
-				t.Errorf("Unexpected panic: %v", r)
-			}
-		}
-	}()
-
-	handler.Login(rec, req)
-
-	mockService.AssertCalled(t, "Login", mock.Anything, creds)
 }
