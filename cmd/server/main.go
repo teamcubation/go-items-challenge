@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"github.com/teamcubation/go-items-challenge/internal/adapters/http/middleware"
 	"log"
 	"net/http"
@@ -18,18 +17,14 @@ import (
 	httphdl "github.com/teamcubation/go-items-challenge/internal/adapters/http"
 	"github.com/teamcubation/go-items-challenge/internal/adapters/repository"
 	"github.com/teamcubation/go-items-challenge/internal/application"
-	"github.com/teamcubation/go-items-challenge/internal/domain/item"
-	"github.com/teamcubation/go-items-challenge/internal/domain/user"
-	"gorm.io/driver/postgres"
-	"gorm.io/gorm"
 )
 
-func runMigrations(db *gorm.DB) {
-	err := db.AutoMigrate(&user.User{}, &item.Item{})
-	if err != nil {
-		log.Fatalf("Failed to migrate database: %v", err)
-	}
-}
+//func runMigrations(db *gorm.DB) {
+//	err := db.AutoMigrate(&user.User{}, &item.Item{})
+//	if err != nil {
+//		log.Fatalf("Failed to migrate database: %v", err)
+//	}
+//}
 
 func main() {
 	err := godotenv.Load("/app/.env")
@@ -37,25 +32,39 @@ func main() {
 		log.Fatalf("Error loading .env file: %v", err)
 	}
 
-	dbHost := os.Getenv("DB_HOST")
-	dbPort := os.Getenv("DB_PORT")
-	dbUser := os.Getenv("DB_USER")
-	dbPassword := os.Getenv("DB_PASSWORD")
-	dbName := os.Getenv("DB_NAME")
-
-	dsn := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable", dbHost, dbPort, dbUser, dbPassword, dbName)
-	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
+	// Initialize Elasticsearch User Adapter
+	esUserAdapter, err := repository.NewElasticsearchUserAdapter()
 	if err != nil {
-		log.Fatalf("Failed to connect to database: %v", err)
+		log.Fatalf("Failed to create Elasticsearch user adapter: %v", err)
 	}
 
-	runMigrations(db)
+	// Initialize Elasticsearch Item Adapter
+	esItemAdapter, err := repository.NewElasticsearchAdapter()
+	if err != nil {
+		log.Fatalf("Failed to create Elasticsearch item adapter: %v", err)
+	}
 
-	userRepo := repository.NewUserRepository(db)
+	//dbHost := os.Getenv("DB_HOST")
+	//dbPort := os.Getenv("DB_PORT")
+	//dbUser := os.Getenv("DB_USER")
+	//dbPassword := os.Getenv("DB_PASSWORD")
+	//dbName := os.Getenv("DB_NAME")
+	//
+	//dsn := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable", dbHost, dbPort, dbUser, dbPassword, dbName)
+	//db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
+	//if err != nil {
+	//	log.Fatalf("Failed to connect to database: %v", err)
+	//}
+	//
+	//runMigrations(db)
+
+	//userRepo:= repository.NewUserRepository(db)
+	userRepo := repository.NewEsUserRepository(esUserAdapter)
 	userSrv := application.NewAuthService(userRepo)
 	authHandler := httphdl.NewAuthHandler(userSrv)
 
-	itemRepo := repository.NewItemRepository(db)
+	//itemRepo := repository.NewItemRepository(db)
+	itemRepo := repository.NewEsItemRepository(esItemAdapter)
 	categoryClient := client.NewCategoryClient("http://mockapi:8000")
 	itemSrv := application.NewItemService(itemRepo, categoryClient)
 	itemHandler := httphdl.NewItemHandler(itemSrv)
