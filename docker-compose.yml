@@ -45,8 +45,33 @@ services:
     networks:
       - app-network
 
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:7.10.1
+    container_name: elasticsearch
+    environment:
+      - discovery.type=single-node
+      - ES_JAVA_OPTS=-Xms512m -Xmx512m
+    ports:
+      - "9200:9200"
+      - "9300:9300"
+    volumes:
+      - esdata:/usr/share/elasticsearch/data
+    networks:
+      - app-network
+  kibana:
+      image: docker.elastic.co/kibana/kibana:7.10.1
+      container_name: kibana
+      ports:
+        - "5601:5601"
+      environment:
+        ELASTICSEARCH_URL: http://elasticsearch:9200
+      networks:
+        - app-network
+
+
 volumes:
   postgres_data:
+  esdata:
 
 networks:
   app-network:
