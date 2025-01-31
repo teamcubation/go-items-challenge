@@ -3,13 +3,14 @@ package http
 import (
 	"encoding/json"
 	"errors"
-	"github.com/teamcubation/go-items-challenge/internal/utils"
-	"net/http"
-
-	"github.com/teamcubation/go-items-challenge/internal/application"
+	"github.com/teamcubation/go-items-challenge/internal/adapters/http/middleware"
+	"github.com/teamcubation/go-items-challenge/internal/adapters/http/presenter"
+	"github.com/teamcubation/go-items-challenge/internal/domain"
 	"github.com/teamcubation/go-items-challenge/internal/domain/user"
 	"github.com/teamcubation/go-items-challenge/internal/ports/in"
+	"github.com/teamcubation/go-items-challenge/internal/utils"
 	"github.com/teamcubation/go-items-challenge/pkg/log"
+	"net/http"
 )
 
 type AuthHandler struct {
@@ -36,27 +37,39 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 
 	var u user.User
 	if err := json.NewDecoder(r.Body).Decode(&u); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		middleware.ErrorHandlingMiddleware(w, presenter.New("ERR_INVALID_REQUEST_BODY", "Invalid request payload", map[string]interface{}{
+			"error": "Check all missing fields and try again",
+		}))
 		return
 	}
-	if err := utils.ValidateStruct(&u); err != nil {
-		http.Error(w, "invalid fields username and/or password", http.StatusBadRequest)
+
+	if u.Username == "" || u.Password == "" {
+		middleware.ErrorHandlingMiddleware(w, presenter.New("ERR_BAD_REQUEST", "Username and password are required", map[string]interface{}{
+			"error": "Check all missing fields and try again",
+		}))
 		return
 	}
+
 	_, err := h.srv.RegisterUser(ctx, &u)
 	if err != nil {
-		if errors.Is(err, application.ErrUsernameExists) {
-			http.Error(w, "username already exists", http.StatusBadRequest)
+		if errors.Is(err, domain.ErrUsernameExists) {
+			middleware.ErrorHandlingMiddleware(w, presenter.New("ERR_USERNAME_EXISTS", "Username already exists", map[string]interface{}{
+				"error": "Try to login instead",
+			}))
 			return
 		}
-		http.Error(w, "Internal server error", http.StatusInternalServerError)
+
+		middleware.ErrorHandlingMiddleware(w, presenter.New("ERR_INTERNAL_SERVER", "Internal server error", map[string]interface{}{
+			"error": err.Error(),
+		}))
 		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")
 	if err := json.NewEncoder(w).Encode(map[string]string{"message": "User created successfully"}); err != nil {
-		http.Error(w, "Internal server error", http.StatusInternalServerError)
-		return
+		middleware.ErrorHandlingMiddleware(w, presenter.New("ERR_INTERNAL_SERVER", "Internal server error", map[string]interface{}{
+			"error": err.Error(),
+		}))
 	}
 }
 
@@ -79,26 +92,45 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 
 	var creds user.Credentials
 	if err := json.NewDecoder(r.Body).Decode(&creds); err != nil {
-		http.Error(w, "Invalid request payload", http.StatusBadRequest)
+		middleware.ErrorHandlingMiddleware(w, presenter.New("ERR_INVALID_REQUEST_BODY", "Invalid request payload", map[string]interface{}{
+			"error": "Check all missing fields and try again",
+		}))
+		return
+	}
+
+	if creds.Username == "" || creds.Password == "" {
+		middleware.ErrorHandlingMiddleware(w, presenter.New("ERR_BAD_REQUEST", "Username and password are required", map[string]interface{}{
+			"error": "Check all missing fields and try again",
+		}))
 		return
 	}
 	if err := utils.ValidateStruct(&creds); err != nil {
-		http.Error(w, "invalid fields username and/or password", http.StatusBadRequest)
+		middleware.ErrorHandlingMiddleware(w, presenter.New("ERR_INVALID_REQUEST_BODY", "Invalid request payload", map[string]interface{}{
+			"error": "Check all missing fields and try again",
+		}))
 		return
 	}
+
 	token, err := h.srv.Login(ctx, creds)
 	if err != nil {
-		if errors.Is(err, application.ErrUsernameNotFound) {
-			http.Error(w, "Username not found", http.StatusUnauthorized)
+		if errors.Is(err, domain.ErrUsernameNotFound) {
+			middleware.ErrorHandlingMiddleware(w, presenter.New("ERR_USERNAME_NOT_FOUND", "Username not found", map[string]interface{}{
+				"error": "Check username or create a new user",
+			}))
 			return
 		}
-		http.Error(w, "Internal server error", http.StatusInternalServerError)
+
+		middleware.ErrorHandlingMiddleware(w, presenter.New("ERR_INTERNAL_SERVER", "Internal server error", map[string]interface{}{
+			"error": err.Error(),
+		}))
 		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")
 	if err := json.NewEncoder(w).Encode(map[string]string{"token": token}); err != nil {
-		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		middleware.ErrorHandlingMiddleware(w, presenter.New("ERR_INTERNAL_SERVER", "Internal server error", map[string]interface{}{
+			"error": err.Error(),
+		}))
 		return
 	}
 }

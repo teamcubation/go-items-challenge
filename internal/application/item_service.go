@@ -2,8 +2,8 @@ package application
 
 import (
 	"context"
-	"errors"
 	"fmt"
+	"github.com/teamcubation/go-items-challenge/internal/domain"
 	"time"
 
 	"github.com/teamcubation/go-items-challenge/internal/domain/item"
@@ -22,25 +22,26 @@ func NewItemService(repo out.ItemRepository, client out.CategoryClient) *itemSer
 
 func (s *itemService) CreateItem(ctx context.Context, item *item.Item) (*item.Item, error) {
 	if item.Code == "" {
-		return nil, errors.New("invalid request body")
+		return nil, domain.ErrMissingFields
 	}
 
 	// calling the client to validate the category
 	isValid, err := s.client.IsAValidCategory(ctx, item.CategoryID)
 	if err != nil {
-		return nil, errors.New("client error")
+		return nil, fmt.Errorf("error validating category: %w", err)
 	}
 	if !isValid {
-		return nil, errors.New("invalid Category")
+		return nil, domain.ErrInvalidCategory
 	}
 
 	if s.repo.ItemExistsByCode(ctx, item.Code) {
-		return nil, errors.New("item with this code already exists")
+		return nil, domain.ErrCodeExists
 	}
 	item.ID = generateID()
 	item.Status = determineStatus(item.Stock)
 	item.CreatedAt = time.Now()
 	item.UpdatedAt = time.Now()
+
 	return s.repo.CreateItem(ctx, item)
 }
 
@@ -50,10 +51,10 @@ func (s *itemService) GetItemByID(ctx context.Context, id int) (*item.Item, erro
 
 	itm, err := s.repo.GetItemByID(ctx, id)
 	if err != nil {
-		return nil, err
+		return nil, domain.ErrFetchingItem
 	}
 	if itm == nil {
-		return nil, fmt.Errorf("item with ID %d not found", id)
+		return nil, domain.ErrItemNotFound
 	}
 	return itm, nil
 }
@@ -61,10 +62,10 @@ func (s *itemService) GetItemByID(ctx context.Context, id int) (*item.Item, erro
 func (s *itemService) UpdateItem(ctx context.Context, updatedItem *item.Item) (*item.Item, error) {
 	existingItem, err := s.repo.GetItemByID(ctx, updatedItem.ID)
 	if err != nil {
-		return nil, err
+		return nil, domain.ErrFetchingItem
 	}
 	if existingItem == nil {
-		return nil, errors.New("item not found")
+		return nil, domain.ErrItemNotFound
 	}
 
 	// Retain original values if new values are not provided
@@ -83,23 +84,33 @@ func (s *itemService) UpdateItem(ctx context.Context, updatedItem *item.Item) (*
 
 	result, err := s.repo.UpdateItem(ctx, updatedItem)
 	if err != nil {
-		return nil, err
+		return nil, domain.ErrUpdatingItem
 	}
 	return result, nil
 }
 
 func (s *itemService) DeleteItem(ctx context.Context, id int) (*item.Item, error) {
+	logger := log.GetFromContext(ctx)
+	logger.Info("Entering ItemService: DeleteItem()")
+
+	if _, err := s.repo.GetItemByID(ctx, id); err != nil {
+		return nil, domain.ErrFetchingItem
+	}
+
 	return s.repo.DeleteItem(ctx, id)
 }
 
 func (s *itemService) ListItems(ctx context.Context, status string, limit int, page int) ([]*item.Item, int, error) {
+	logger := log.GetFromContext(ctx)
+	logger.Info("Entering ItemService: ListItems()")
+
 	if status == "" {
 		status = "ACTIVE"
 	}
 
 	items, err := s.repo.ListItems(ctx, status, limit, page)
 	if err != nil {
-		return nil, 0, err
+		return nil, 0, domain.ErrFetchingItem
 	}
 
 	totalPages := (len(items.Data) + limit - 1) / limit

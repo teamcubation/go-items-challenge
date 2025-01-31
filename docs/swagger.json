@@ -1,13 +1,13 @@
 {
     "swagger": "2.0",
     "info": {
-        "description": "This is a simple items API",
-        "title": "Items API",
+        "description": "API para gerenciar categorias",
+        "title": "Categoria API",
         "contact": {},
         "version": "1.0"
     },
-    "host": "localhost:8080",
-    "basePath": "/api",
+    "host": "localhost:8000",
+    "basePath": "/v1",
     "paths": {
         "/items": {
             "get": {
