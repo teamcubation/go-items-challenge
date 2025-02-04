@@ -2,12 +2,14 @@ package application
 
 import (
 	"context"
-	"github.com/teamcubation/go-items-challenge/internal/domain"
 	"strings"
+
+	"github.com/teamcubation/go-items-challenge/internal/domain"
 
 	"golang.org/x/crypto/bcrypt"
 
 	"github.com/teamcubation/go-items-challenge/internal/domain/user"
+	"github.com/teamcubation/go-items-challenge/internal/ports/in"
 	"github.com/teamcubation/go-items-challenge/internal/ports/out"
 	"github.com/teamcubation/go-items-challenge/internal/utils"
 )
@@ -16,7 +18,7 @@ type authService struct {
 	repo out.UserRepository
 }
 
-func NewAuthService(repo out.UserRepository) *authService {
+func NewAuthService(repo out.UserRepository) in.AuthService {
 	return &authService{repo: repo}
 }
 

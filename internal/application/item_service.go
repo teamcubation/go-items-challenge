@@ -3,10 +3,12 @@ package application
 import (
 	"context"
 	"fmt"
-	"github.com/teamcubation/go-items-challenge/internal/domain"
 	"time"
 
+	"github.com/teamcubation/go-items-challenge/internal/domain"
+
 	"github.com/teamcubation/go-items-challenge/internal/domain/item"
+	"github.com/teamcubation/go-items-challenge/internal/ports/in"
 	"github.com/teamcubation/go-items-challenge/internal/ports/out"
 	"github.com/teamcubation/go-items-challenge/pkg/log"
 )
@@ -16,7 +18,7 @@ type itemService struct {
 	client out.CategoryClient
 }
 
-func NewItemService(repo out.ItemRepository, client out.CategoryClient) *itemService {
+func NewItemService(repo out.ItemRepository, client out.CategoryClient) in.ItemService {
 	return &itemService{repo: repo, client: client}
 }
 

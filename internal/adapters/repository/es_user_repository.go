@@ -5,30 +5,24 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strings"
+
 	"github.com/elastic/go-elasticsearch/v8"
 	"github.com/elastic/go-elasticsearch/v8/esapi"
 	"github.com/teamcubation/go-items-challenge/internal/domain/user"
-	"strings"
+	"github.com/teamcubation/go-items-challenge/internal/ports/out"
 )
 
-type ElasticsearchUserAdapter struct {
+type esUserRepository struct {
 	client *elasticsearch.Client
 }
 
-func NewElasticsearchUserAdapter() (*ElasticsearchUserAdapter, error) {
+func NewElasticsearchUserAdapter() (out.UserRepository, error) {
 	client, err := elasticsearch.NewDefaultClient()
 	if err != nil {
 		return nil, err
 	}
-	return &ElasticsearchUserAdapter{client: client}, nil
-}
-
-type esUserRepository struct {
-	esAdapter *ElasticsearchUserAdapter
-}
-
-func NewEsUserRepository(esAdapter *ElasticsearchUserAdapter) *esUserRepository {
-	return &esUserRepository{esAdapter: esAdapter}
+	return &esUserRepository{client: client}, nil
 }
 
 func (r *esUserRepository) CreateUser(ctx context.Context, u *user.User) error {
@@ -44,7 +38,7 @@ func (r *esUserRepository) CreateUser(ctx context.Context, u *user.User) error {
 		Refresh:    "true",
 	}
 
-	res, err := req.Do(ctx, r.esAdapter.client)
+	res, err := req.Do(ctx, r.client)
 	if err != nil {
 		return err
 	}
@@ -63,7 +57,7 @@ func (r *esUserRepository) GetUserByUsername(ctx context.Context, username strin
 		Body:  strings.NewReader(query),
 	}
 
-	res, err := req.Do(ctx, r.esAdapter.client)
+	res, err := req.Do(ctx, r.client)
 	if err != nil {
 		return nil, err
 	}

@@ -5,12 +5,13 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strings"
+	"time"
+
 	"github.com/elastic/go-elasticsearch/v8"
 	"github.com/elastic/go-elasticsearch/v8/esapi"
 	"github.com/teamcubation/go-items-challenge/internal/domain/item"
 	"github.com/teamcubation/go-items-challenge/internal/ports/out"
-	"strings"
-	"time"
 )
 
 type Item struct {
@@ -28,24 +29,16 @@ type Item struct {
 	UpdatedBy   int       `json:"updated_by"`
 }
 
-type ElasticsearchAdapter struct {
+type esItemRepository struct {
 	client *elasticsearch.Client
 }
 
-func NewElasticsearchAdapter() (*ElasticsearchAdapter, error) {
+func NewElasticsearchAdapter() (out.ItemRepository, error) {
 	client, err := elasticsearch.NewDefaultClient()
 	if err != nil {
 		return nil, err
 	}
-	return &ElasticsearchAdapter{client: client}, nil
-}
-
-type esItemRepository struct {
-	esAdapter *ElasticsearchAdapter
-}
-
-func NewEsItemRepository(esAdapter *ElasticsearchAdapter) out.ItemRepository {
-	return &esItemRepository{esAdapter: esAdapter}
+	return &esItemRepository{client: client}, nil
 }
 
 func (r *esItemRepository) CreateItem(ctx context.Context, itm *item.Item) (*item.Item, error) {
@@ -61,7 +54,7 @@ func (r *esItemRepository) CreateItem(ctx context.Context, itm *item.Item) (*ite
 		Refresh:    "true",
 	}
 
-	res, err := req.Do(ctx, r.esAdapter.client)
+	res, err := req.Do(ctx, r.client)
 	if err != nil {
 		return nil, err
 	}
@@ -79,7 +72,7 @@ func (r *esItemRepository) GetItemByID(ctx context.Context, id int) (*item.Item,
 		DocumentID: fmt.Sprintf("%d", id),
 	}
 
-	res, err := req.Do(ctx, r.esAdapter.client)
+	res, err := req.Do(ctx, r.client)
 	if err != nil {
 		return nil, err
 	}
@@ -110,7 +103,7 @@ func (r *esItemRepository) UpdateItem(ctx context.Context, itm *item.Item) (*ite
 		Refresh:    "true",
 	}
 
-	res, err := req.Do(ctx, r.esAdapter.client)
+	res, err := req.Do(ctx, r.client)
 	if err != nil {
 		return nil, err
 	}
@@ -129,7 +122,7 @@ func (r *esItemRepository) DeleteItem(ctx context.Context, id int) (*item.Item, 
 		Refresh:    "true",
 	}
 
-	res, err := req.Do(ctx, r.esAdapter.client)
+	res, err := req.Do(ctx, r.client)
 	if err != nil {
 		return nil, err
 	}
@@ -141,7 +134,7 @@ func (r *esItemRepository) DeleteItem(ctx context.Context, id int) (*item.Item, 
 	return nil, nil
 }
 
-func (e *ElasticsearchAdapter) SearchItems(ctx context.Context, query string, options map[string]interface{}) ([]Item, error) {
+func (e *esItemRepository) SearchItems(ctx context.Context, query string, options map[string]interface{}) ([]Item, error) {
 	req := esapi.SearchRequest{
 		Index: []string{"items"},
 		Body:  strings.NewReader(query),
@@ -167,13 +160,13 @@ func (e *ElasticsearchAdapter) SearchItems(ctx context.Context, query string, op
 
 func (r *esItemRepository) ItemExistsByCode(ctx context.Context, code string) bool {
 	query := fmt.Sprintf(`{"query": {"match": {"code": "%s"}}}`, code)
-	items, err := r.esAdapter.SearchItems(ctx, query, nil)
+	items, err := r.SearchItems(ctx, query, nil)
 	return err == nil && len(items) > 0
 }
 
 func (r *esItemRepository) ListItems(ctx context.Context, status string, limit int, page int) (*item.Response, error) {
 	query := fmt.Sprintf(`{"query": {"match": {"status": "%s"}}}`, status)
-	repoItems, err := r.esAdapter.SearchItems(ctx, query, map[string]interface{}{
+	repoItems, err := r.SearchItems(ctx, query, map[string]interface{}{
 		"from": (page - 1) * limit,
 		"size": limit,
 	})
